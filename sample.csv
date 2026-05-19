@@ -1,18 +1,18 @@
-jogo_id,fase,time1,placar1,time2,placar2,status
-J1,primeira,Time A,,Time B,,a_definir
-J2,primeira,Time C,,Time D,,a_definir
-J3,primeira,Time E,,Time F,,a_definir
-J4,primeira,Time G,,Time H,,a_definir
-J5,primeira,Time I,,Time J,,a_definir
-J6,primeira,Time K,,Time L,,a_definir
-RP1,repescagem_f1,,,,,a_definir
-RP2,repescagem_f1,,,,,a_definir
-RF1,repescagem_final,,,,,a_definir
-RF2,repescagem_final,,,,,a_definir
-QF1,quartas,,,,,a_definir
-QF2,quartas,,,,,a_definir
-QF3,quartas,,,,,a_definir
-QF4,quartas,,,,,a_definir
-SF1,semis,,,,,a_definir
-SF2,semis,,,,,a_definir
-FINAL,final,,,,,a_definir
+jogo_id,fase,jogador1,clube1,placar1,jogador2,clube2,placar2,status
+J1,primeira,Jogador A,,,Jogador B,,,a_definir
+J2,primeira,Jogador C,,,Jogador D,,,a_definir
+J3,primeira,Jogador E,,,Jogador F,,,a_definir
+J4,primeira,Jogador G,,,Jogador H,,,a_definir
+J5,primeira,Jogador I,,,Jogador J,,,a_definir
+J6,primeira,Jogador K,,,Jogador L,,,a_definir
+RP1,repescagem_f1,,,,,,,a_definir
+RP2,repescagem_f1,,,,,,,a_definir
+RF1,repescagem_final,,,,,,,a_definir
+RF2,repescagem_final,,,,,,,a_definir
+QF1,quartas,,,,,,,a_definir
+QF2,quartas,,,,,,,a_definir
+QF3,quartas,,,,,,,a_definir
+QF4,quartas,,,,,,,a_definir
+SF1,semis,,,,,,,a_definir
+SF2,semis,,,,,,,a_definir
+FINAL,final,,,,,,,a_definir

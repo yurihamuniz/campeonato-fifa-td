@@ -20,6 +20,43 @@ const PHASES = [
   { id: "final",           match_ids: ["FINAL"] },
 ];
 
+// Mapa de clubes → arquivo do escudo em assets/clubs/<slug>.png
+// O nome canônico (chave) deve ser usado nas colunas clube1/clube2 da planilha.
+const CLUBS = {
+  "Real Madrid":         "real-madrid",
+  "Barcelona":           "barcelona",
+  "PSG":                 "psg",
+  "Bayern de Munique":   "bayern",
+  "Liverpool":           "liverpool",
+  "Arsenal":             "arsenal",
+  "Manchester City":     "man-city",
+  "Inter de Milão":      "inter",
+  "Atlético de Madrid":  "atletico",
+  "Napoli":              "napoli",
+  "Borussia Dortmund":   "dortmund",
+  "Milan":               "milan",
+  "Newcastle United":    "newcastle",
+  "Tottenham":           "tottenham",
+  "Juventus":            "juventus",
+  "RB Leipzig":          "leipzig",
+  "Bayer Leverkusen":    "leverkusen",
+  "Chelsea":             "chelsea",
+  "Manchester United":   "man-united",
+  "Galatasaray":         "galatasaray",
+};
+
+// Tolera variações de grafia/acentuação (PSG, psg, "Atletico Madrid", etc)
+const _normalizeClub = s => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+const CLUBS_NORM = Object.fromEntries(
+  Object.entries(CLUBS).map(([name, slug]) => [_normalizeClub(name), slug])
+);
+
+function clubCrestURL(clubeName) {
+  if (!clubeName) return null;
+  const slug = CLUBS_NORM[_normalizeClub(clubeName)];
+  return slug ? `assets/clubs/${slug}.png` : null;
+}
+
 // ============================================================
 // FETCH + PARSE
 // ============================================================
@@ -75,11 +112,14 @@ function buildMatch(row) {
     if (p1 > p2) winner = 1;
     else if (p2 > p1) winner = 2;
   }
+  // Aceita os schemas antigo (time1/time2) e novo (jogador1/jogador2 + clube1/clube2)
   return {
     id: row.jogo_id,
     phase: (row.fase || "").toLowerCase(),
-    team1: row.time1 || "",
-    team2: row.time2 || "",
+    player1: row.jogador1 || row.time1 || "",
+    player2: row.jogador2 || row.time2 || "",
+    club1:   row.clube1 || "",
+    club2:   row.clube2 || "",
     score1: p1,
     score2: p2,
     status,
@@ -90,12 +130,14 @@ function buildMatch(row) {
 function computeLosersRanking(matches) {
   const primeira = matches.filter(m => m.phase === "primeira" && m.status === "finalizado" && m.winner);
   const losers = primeira.map(m => {
-    const loserIsTeam1 = m.winner === 2;
-    const name = loserIsTeam1 ? m.team1 : m.team2;
-    const scoreFor = loserIsTeam1 ? m.score1 : m.score2;
-    const scoreAgainst = loserIsTeam1 ? m.score2 : m.score1;
+    const loserIsP1 = m.winner === 2;
+    const name = loserIsP1 ? m.player1 : m.player2;
+    const club = loserIsP1 ? m.club1 : m.club2;
+    const scoreFor = loserIsP1 ? m.score1 : m.score2;
+    const scoreAgainst = loserIsP1 ? m.score2 : m.score1;
     return {
       name,
+      club,
       saldo: scoreFor - scoreAgainst,
       feitos: scoreFor,
       sourceMatch: m.id,
@@ -129,11 +171,27 @@ function renderBracket(matches) {
     container.innerHTML = "";
     for (const matchId of phase.match_ids) {
       const m = byId[matchId] || {
-        id: matchId, phase: phase.id, team1: "", team2: "",
+        id: matchId, phase: phase.id, player1: "", player2: "",
+        club1: "", club2: "",
         score1: null, score2: null, status: "a_definir", winner: null,
       };
       container.appendChild(renderMatch(m, tpl));
     }
+  }
+}
+
+function applyTeamSide(sideEl, playerName, clubName) {
+  sideEl.querySelector(".team-name").textContent = playerName || "a definir";
+  const img = sideEl.querySelector(".club-crest");
+  const url = clubCrestURL(clubName);
+  if (url) {
+    img.src = url;
+    img.alt = clubName;
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+    img.removeAttribute("src");
+    img.alt = "";
   }
 }
 
@@ -147,8 +205,8 @@ function renderMatch(m, tpl) {
   const t1 = node.querySelector(".team-1");
   const t2 = node.querySelector(".team-2");
 
-  t1.querySelector(".team-name").textContent = m.team1 || "a definir";
-  t2.querySelector(".team-name").textContent = m.team2 || "a definir";
+  applyTeamSide(t1, m.player1, m.club1);
+  applyTeamSide(t2, m.player2, m.club2);
   t1.querySelector(".team-score").textContent = m.score1 != null ? m.score1 : "–";
   t2.querySelector(".team-score").textContent = m.score2 != null ? m.score2 : "–";
 
@@ -171,8 +229,13 @@ function renderRanking(losers) {
   }
   for (const l of losers) {
     const li = document.createElement("li");
+    const crest = clubCrestURL(l.club);
+    const crestHTML = crest
+      ? `<img class="club-crest crest-sm" src="${crest}" alt="${escapeHTML(l.club)}">`
+      : `<span class="crest-sm crest-placeholder"></span>`;
     li.innerHTML = `
-      <span class="name">${escapeHTML(l.name)}</span>
+      ${crestHTML}
+      <span class="name">${escapeHTML(l.name || "—")}</span>
       <span class="stat">saldo ${l.saldo >= 0 ? "+" : ""}${l.saldo}</span>
       <span class="stat">${l.feitos} GP</span>
     `;

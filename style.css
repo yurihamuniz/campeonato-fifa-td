@@ -187,6 +187,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   padding: 11px 14px;
   font-size: 0.95rem;
   font-weight: 500;
@@ -195,6 +196,24 @@ body {
 }
 
 .team:first-child { border-top: none; }
+
+.team-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.club-crest {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.club-crest[hidden] { display: none; }
 
 .team-name {
   white-space: nowrap;
@@ -297,14 +316,26 @@ body {
 .ranking li {
   counter-increment: rank;
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: 12px;
+  grid-template-columns: auto auto 1fr auto auto;
+  gap: 10px;
   align-items: center;
   padding: 10px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
+}
+
+.ranking .crest-sm {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.ranking .crest-placeholder {
+  background: var(--border);
+  border-radius: 50%;
+  opacity: 0.4;
 }
 
 .ranking li::before {
