@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campeonato FIFA TD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo-TD-branco.png" alt="TD" class="logo">
+      <div class="title-group">
+        <h1>Campeonato FIFA TD</h1>
+        <p class="subtitle">Bracket ao vivo</p>
+      </div>
+    </div>
+    <div class="status-bar">
+      <span class="dot" id="live-dot"></span>
+      <span id="last-update">carregando...</span>
+    </div>
+  </header>
+
+  <main id="bracket">
+    <section class="phase" data-phase="primeira">
+      <h2 class="phase-title">1ª Fase</h2>
+      <div class="matches" id="matches-primeira"></div>
+    </section>
+
+    <section class="phase" data-phase="repescagem_f1">
+      <h2 class="phase-title">Repescagem F1</h2>
+      <div class="matches" id="matches-repescagem_f1"></div>
+    </section>
+
+    <section class="phase" data-phase="repescagem_final">
+      <h2 class="phase-title">Repescagem Final</h2>
+      <div class="matches" id="matches-repescagem_final"></div>
+    </section>
+
+    <section class="phase" data-phase="quartas">
+      <h2 class="phase-title">Quartas</h2>
+      <div class="matches" id="matches-quartas"></div>
+    </section>
+
+    <section class="phase" data-phase="semis">
+      <h2 class="phase-title">Semifinais</h2>
+      <div class="matches" id="matches-semis"></div>
+    </section>
+
+    <section class="phase phase-final" data-phase="final">
+      <h2 class="phase-title">Final</h2>
+      <div class="matches" id="matches-final"></div>
+    </section>
+  </main>
+
+  <aside class="sidebar">
+    <h3>Ranking dos derrotados</h3>
+    <p class="hint">Critérios: saldo de gols → gols marcados → ordem na planilha</p>
+    <ol id="ranking-derrotados" class="ranking"></ol>
+  </aside>
+
+  <footer class="footer">
+    <p>Atualização automática a cada 20s · <a href="#" id="refresh-now">atualizar agora</a></p>
+  </footer>
+
+  <template id="match-template">
+    <article class="match">
+      <div class="match-header">
+        <span class="match-id"></span>
+        <span class="match-status"></span>
+      </div>
+      <div class="match-body">
+        <div class="team team-1">
+          <span class="team-name"></span>
+          <span class="team-score"></span>
+        </div>
+        <div class="team team-2">
+          <span class="team-name"></span>
+          <span class="team-score"></span>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
