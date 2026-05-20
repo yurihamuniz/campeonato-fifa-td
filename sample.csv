@@ -7,9 +7,10 @@ J5,primeira,Jogador I,,,Jogador J,,,a_definir
 J6,primeira,Jogador K,,,Jogador L,,,a_definir
 RP1,repescagem_f1,,,,,,,a_definir
 RP2,repescagem_f1,,,,,,,a_definir
-RF1,repescagem_final,,,,,,,a_definir
-RF2,repescagem_final,,,,,,,a_definir
-QF1,quartas,,,,,,,a_definir
+RP3,repescagem_f1,,,,,,,a_definir
+RF1,repescagem_f2,,,,,,,a_definir
+FR,repescagem_final,,,,,,,a_definir
+QF1,quartas,Jogador M,,,,,,a_definir
 QF2,quartas,,,,,,,a_definir
 QF3,quartas,,,,,,,a_definir
 QF4,quartas,,,,,,,a_definir

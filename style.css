@@ -403,11 +403,11 @@ body {
 
 @media (min-width: 1200px) {
   #bracket {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     align-items: start;
   }
-  .phase { padding: 16px 14px; }
-  .phase-title { font-size: 0.75rem; }
+  .phase { padding: 14px 12px; }
+  .phase-title { font-size: 0.72rem; }
 }
 
 /* Reduce motion */

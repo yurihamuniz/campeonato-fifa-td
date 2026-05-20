@@ -10,11 +10,12 @@ const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjVVtDYX
 const REFRESH_INTERVAL_MS = 20_000;
 const FALLBACK_CSV_URL = "sample.csv";
 
-// Ordem oficial das fases no bracket
+// Ordem oficial das fases no bracket (13 participantes — Time M tem bye)
 const PHASES = [
   { id: "primeira",        match_ids: ["J1","J2","J3","J4","J5","J6"] },
-  { id: "repescagem_f1",   match_ids: ["RP1","RP2"] },
-  { id: "repescagem_final",match_ids: ["RF1","RF2"] },
+  { id: "repescagem_f1",   match_ids: ["RP1","RP2","RP3"] },
+  { id: "repescagem_f2",   match_ids: ["RF1"] },
+  { id: "repescagem_final",match_ids: ["FR"] },
   { id: "quartas",         match_ids: ["QF1","QF2","QF3","QF4"] },
   { id: "semis",           match_ids: ["SF1","SF2"] },
   { id: "final",           match_ids: ["FINAL"] },
@@ -143,9 +144,35 @@ function computeLosersRanking(matches) {
       sourceMatch: m.id,
     };
   });
-  // Desempate: saldo (desc) → gols feitos (desc) → ordem original (asc)
-  return losers
-    .map((l, idx) => ({ ...l, _idx: idx }))
+  return rankBySaldo(losers);
+}
+
+// Ranking dos 3 vencedores da Repescagem F1 (RP1, RP2, RP3)
+// Mesmo critério: saldo → gols feitos → ordem (RP1 < RP2 < RP3 em caso de empate).
+function computeRepescagemWinnersRanking(matches) {
+  const rpMatches = ["RP1","RP2","RP3"]
+    .map(id => matches.find(m => m.id === id))
+    .filter(m => m && m.status === "finalizado" && m.winner);
+  const winners = rpMatches.map(m => {
+    const winnerIsP1 = m.winner === 1;
+    const name = winnerIsP1 ? m.player1 : m.player2;
+    const club = winnerIsP1 ? m.club1 : m.club2;
+    const scoreFor = winnerIsP1 ? m.score1 : m.score2;
+    const scoreAgainst = winnerIsP1 ? m.score2 : m.score1;
+    return {
+      name,
+      club,
+      saldo: scoreFor - scoreAgainst,
+      feitos: scoreFor,
+      sourceMatch: m.id,
+    };
+  });
+  return rankBySaldo(winners);
+}
+
+function rankBySaldo(items) {
+  return items
+    .map((it, idx) => ({ ...it, _idx: idx }))
     .sort((a, b) => {
       if (b.saldo !== a.saldo) return b.saldo - a.saldo;
       if (b.feitos !== a.feitos) return b.feitos - a.feitos;
@@ -154,27 +181,30 @@ function computeLosersRanking(matches) {
 }
 
 // ============================================================
-// AUTO-PROPAGAÇÃO ENTRE FASES
+// AUTO-PROPAGAÇÃO ENTRE FASES (13 participantes — Time M tem bye)
 // ============================================================
-// Regras determinísticas que o JS preenche sozinho (sem precisar
-// editar a planilha). Valores manualmente preenchidos têm prioridade
-// — só auto-preenche se a célula correspondente estiver vazia.
+// Regras determinísticas que o JS preenche sozinho. Valores
+// manualmente preenchidos têm prioridade — só auto-preenche se a
+// célula correspondente estiver vazia.
 //
-// Repescagem (depende do ranking dos 6 derrotados da 1ª fase):
-//   RP1 = 3º colocado × 6º colocado (best-of-bottom-4 × pior)
-//   RP2 = 4º × 5º
-//   RF1 = 1º (melhor derrotado) × vencedor de RP1
-//   RF2 = 2º × vencedor de RP2
+// Repescagem F1 (todos os 6 derrotados, pareados melhor × pior):
+//   RP1 = 1º melhor derrotado × 6º melhor derrotado
+//   RP2 = 2º melhor × 5º melhor
+//   RP3 = 3º melhor × 4º melhor
 //
-// Semis (vínculo direto com as quartas):
-//   SF1 = vencedor QF1 × vencedor QF2
-//   SF2 = vencedor QF3 × vencedor QF4
+// Repescagem F2 (3 vencedores da F1 ranqueados por saldo):
+//   RF1 = 2º melhor vencedor F1 × 3º melhor vencedor F1
+//   (o 1º melhor vencedor F1 vai direto pra Final da Repescagem)
 //
-// Final:
-//   FINAL = vencedor SF1 × vencedor SF2
+// Final da Repescagem:
+//   FR = 1º melhor vencedor F1 × vencedor RF1
 //
-// Quartas (QF1..QF4) NÃO são auto-preenchidas — há sorteio manual
-// que mistura os 6 vencedores da 1ª fase com os 2 vencedores da RF.
+// Quartas:
+//   QF1.jogador2 = vencedor FR (Time M em QF1.jogador1 é manual)
+//   QF2, QF3, QF4: manuais (sorteio entre os 6 vencedores da 1ª fase)
+//
+// Semis: SF1 = QF1 × QF2, SF2 = QF3 × QF4
+// Final: vencedor SF1 × vencedor SF2
 function winnerSide(m) {
   if (!m || m.status !== "finalizado" || !m.winner) return null;
   return m.winner === 1
@@ -193,21 +223,36 @@ function fillSide(match, side, source) {
   }
 }
 
-function deriveMatches(matches, losers) {
+function deriveMatches(matches, losers, repWinners) {
   const byId = Object.fromEntries(matches.map(m => [m.id, m]));
 
-  // Repescagem: precisa dos 6 derrotados ranqueados
+  // Repescagem F1: precisa dos 6 derrotados ranqueados (best × worst)
   if (losers.length === 6) {
     const asSrc = i => ({ player: losers[i].name, club: losers[i].club });
-    fillSide(byId.RP1, 1, asSrc(2)); // 3º
+    fillSide(byId.RP1, 1, asSrc(0)); // 1º melhor
     fillSide(byId.RP1, 2, asSrc(5)); // 6º
-    fillSide(byId.RP2, 1, asSrc(3)); // 4º
+    fillSide(byId.RP2, 1, asSrc(1)); // 2º
     fillSide(byId.RP2, 2, asSrc(4)); // 5º
-    fillSide(byId.RF1, 1, asSrc(0)); // 1º (melhor)
-    fillSide(byId.RF1, 2, winnerSide(byId.RP1));
-    fillSide(byId.RF2, 1, asSrc(1)); // 2º
-    fillSide(byId.RF2, 2, winnerSide(byId.RP2));
+    fillSide(byId.RP3, 1, asSrc(2)); // 3º
+    fillSide(byId.RP3, 2, asSrc(3)); // 4º
   }
+
+  // Repescagem F2 (RF1) e Final da Repescagem (FR):
+  // precisam dos 3 vencedores da F1 ranqueados
+  if (repWinners.length === 3) {
+    const asSrc = i => ({ player: repWinners[i].name, club: repWinners[i].club });
+    // RF1 = 2º melhor × 3º melhor vencedor F1
+    fillSide(byId.RF1, 1, asSrc(1));
+    fillSide(byId.RF1, 2, asSrc(2));
+    // FR = 1º melhor vencedor F1 × vencedor RF1
+    fillSide(byId.FR, 1, asSrc(0));
+  }
+  // FR.jogador2 = vencedor de RF1 (mesmo se repWinners ainda não estiver completo,
+  // se RF1 for finalizado o vencedor já está definido)
+  fillSide(byId.FR, 2, winnerSide(byId.RF1));
+
+  // Quartas — apenas QF1.jogador2 (Time M em QF1.jogador1 é manual)
+  fillSide(byId.QF1, 2, winnerSide(byId.FR));
 
   // Semis
   fillSide(byId.SF1, 1, winnerSide(byId.QF1));
@@ -329,7 +374,8 @@ async function refresh() {
     const rows = await loadData();
     const matches = rows.filter(r => r.jogo_id).map(buildMatch);
     const losers = computeLosersRanking(matches);
-    deriveMatches(matches, losers);
+    const repWinners = computeRepescagemWinnersRanking(matches);
+    deriveMatches(matches, losers, repWinners);
     renderBracket(matches);
     renderRanking(losers);
     const now = new Date();

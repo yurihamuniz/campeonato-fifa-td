@@ -2,6 +2,8 @@
 
 Página HTML estática que renderiza o chaveamento do campeonato lendo os resultados de uma planilha Google. Auto-refresh a cada 20s — todo mundo vê os placares atualizarem sem precisar dar reload.
 
+**Formato:** 13 participantes. 12 jogam a 1ª fase em 6 confrontos. Time M tem bye direto pras quartas. Os 6 derrotados disputam a repescagem (3 fases) por 1 vaga nas quartas, que enfrenta o Time M na QF1.
+
 ## Como funciona
 
 ```
@@ -26,9 +28,10 @@ Página HTML estática que renderiza o chaveamento do campeonato lendo os result
   | jogo_id | fase | jogador1 | clube1 | placar1 | jogador2 | clube2 | placar2 | status |
   | ------- | ---- | -------- | ------ | ------- | -------- | ------ | ------- | ------ |
 
-- Copie as 17 linhas do arquivo [`sample.csv`](sample.csv) (Arquivo → Importar → Substituir planilha).
+- Copie as 18 linhas do arquivo [`sample.csv`](sample.csv) (Arquivo → Importar → Substituir planilha).
 - Os valores válidos para `status` são: `a_definir`, `ao_vivo`, `finalizado`.
-- As fases válidas são: `primeira`, `repescagem_f1`, `repescagem_final`, `quartas`, `semis`, `final`.
+- As fases válidas são: `primeira`, `repescagem_f1`, `repescagem_f2`, `repescagem_final`, `quartas`, `semis`, `final`.
+- **IMPORTANTE — Time M (bye):** a linha `QF1` já tem `jogador1` = "Jogador M" no `sample.csv`. Logo após o sorteio inicial, troque "Jogador M" pelo nome real do jogador com bye e preencha `clube1` do `QF1` com o clube dele. O jogador2 da QF1 é auto-preenchido (vencedor da repescagem).
 - **Clubes válidos** (use exatamente esses nomes nas colunas `clube1`/`clube2` para o escudo aparecer):
 
   **5★** — `Real Madrid`, `Barcelona`, `PSG`, `Bayern de Munique`, `Liverpool`, `Arsenal`, `Manchester City`, `Inter de Milão`
@@ -86,24 +89,27 @@ Pronto. Manda no grupo e qualquer pessoa vê o bracket atualizar em tempo real c
 
 A página calcula sozinha conforme os resultados acontecem:
 
-| Fase     | Como é preenchida                                                      |
-| -------- | ---------------------------------------------------------------------- |
-| **RP1**  | 3º colocado × 6º colocado no ranking dos 6 derrotados da 1ª fase       |
-| **RP2**  | 4º × 5º colocados                                                       |
-| **RF1**  | 1º colocado × vencedor da RP1                                          |
-| **RF2**  | 2º × vencedor da RP2                                                   |
-| **SF1**  | Vencedor da QF1 × vencedor da QF2                                      |
-| **SF2**  | Vencedor da QF3 × vencedor da QF4                                      |
-| **FINAL**| Vencedor da SF1 × vencedor da SF2                                      |
+| Linha    | Como é preenchida                                                       |
+| -------- | ----------------------------------------------------------------------- |
+| **RP1**  | 1º melhor derrotado × 6º melhor derrotado (1ª fase)                     |
+| **RP2**  | 2º × 5º melhores derrotados                                             |
+| **RP3**  | 3º × 4º melhores derrotados                                             |
+| **RF1**  | 2º melhor vencedor da F1 × 3º melhor vencedor da F1                     |
+| **FR**   | 1º melhor vencedor da F1 × vencedor da RF1                              |
+| **QF1.jogador2** | Vencedor da FR (a outra metade da QF1 é o Time M, preenchido manualmente) |
+| **SF1**  | Vencedor da QF1 × vencedor da QF2                                       |
+| **SF2**  | Vencedor da QF3 × vencedor da QF4                                       |
+| **FINAL**| Vencedor da SF1 × vencedor da SF2                                       |
 
 Os nomes auto-preenchidos aparecem em itálico para diferenciar dos digitados à mão. Se você quiser sobrescrever, basta preencher manualmente na planilha — o valor manual sempre tem prioridade.
 
-Ranking dos derrotados usa: **saldo de gols → gols marcados → ordem na planilha** como critério de desempate.
+Ranking (derrotados e vencedores da F1) usa: **saldo de gols → gols marcados → ordem na planilha** como critério de desempate.
 
 ### O que continua manual
 
-- Placares e status de cada jogo (você joga e digita)
-- **Sorteio das quartas (QF1–QF4)**: depois que RF1 e RF2 acabarem, sorteia as 8 chaves (6 vencedores da 1ª fase + 2 vencedores da repescagem) e preenche `jogador1`/`clube1`/`jogador2`/`clube2` das linhas `QF1` a `QF4`.
+- **Time M na QF1**: preencher `jogador1`/`clube1` da linha `QF1` no início.
+- Placares e status de cada jogo (você joga e digita).
+- **Sorteio de QF2, QF3, QF4**: depois que todos os 6 jogos da 1ª fase terminarem, sorteia os 6 vencedores em 3 pares e preenche os 4 campos de cada uma dessas 3 linhas.
 
 ## Estrutura dos arquivos
 
