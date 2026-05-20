@@ -75,14 +75,35 @@ Pronto. Manda no grupo e qualquer pessoa vê o bracket atualizar em tempo real c
 
 ## Como atualizar resultados durante o torneio
 
+### Fluxo básico
 1. Abra a planilha (de preferência pelo app Google Sheets no celular).
 2. Depois do sorteio inicial, preencha as colunas `jogador1`/`clube1` e `jogador2`/`clube2` das linhas `J1` a `J6` — o escudo aparece na tela ao lado do nome do jogador.
 3. Quando começar um jogo, mude o `status` da linha para `ao_vivo` — o card pulsa em roxo na tela de todo mundo.
 4. Conforme rolam os gols, atualize `placar1` e `placar2`.
 5. Ao fim do jogo, mude o `status` para `finalizado`. O vencedor é detectado automaticamente (maior placar).
-6. Quando todos os 6 jogos da 1ª fase estiverem `finalizado`, o ranking dos derrotados aparece na lateral com escudo + nome, ordenado por **saldo de gols → gols marcados → ordem na planilha**.
-7. Use o ranking para decidir os confrontos da repescagem e preencha `jogador1`/`clube1`/`jogador2`/`clube2` das linhas `RP1`, `RP2`, etc.
-8. Mesma lógica vale para as quartas, semis e final (preencher após o sorteio).
+
+### O que é automático (você NÃO precisa preencher)
+
+A página calcula sozinha conforme os resultados acontecem:
+
+| Fase     | Como é preenchida                                                      |
+| -------- | ---------------------------------------------------------------------- |
+| **RP1**  | 3º colocado × 6º colocado no ranking dos 6 derrotados da 1ª fase       |
+| **RP2**  | 4º × 5º colocados                                                       |
+| **RF1**  | 1º colocado × vencedor da RP1                                          |
+| **RF2**  | 2º × vencedor da RP2                                                   |
+| **SF1**  | Vencedor da QF1 × vencedor da QF2                                      |
+| **SF2**  | Vencedor da QF3 × vencedor da QF4                                      |
+| **FINAL**| Vencedor da SF1 × vencedor da SF2                                      |
+
+Os nomes auto-preenchidos aparecem em itálico para diferenciar dos digitados à mão. Se você quiser sobrescrever, basta preencher manualmente na planilha — o valor manual sempre tem prioridade.
+
+Ranking dos derrotados usa: **saldo de gols → gols marcados → ordem na planilha** como critério de desempate.
+
+### O que continua manual
+
+- Placares e status de cada jogo (você joga e digita)
+- **Sorteio das quartas (QF1–QF4)**: depois que RF1 e RF2 acabarem, sorteia as 8 chaves (6 vencedores da 1ª fase + 2 vencedores da repescagem) e preenche `jogador1`/`clube1`/`jogador2`/`clube2` das linhas `QF1` a `QF4`.
 
 ## Estrutura dos arquivos
 

@@ -221,6 +221,15 @@ body {
   text-overflow: ellipsis;
 }
 
+.team-info.auto-derived .team-name {
+  font-style: italic;
+  opacity: 0.78;
+}
+
+.team-info.auto-derived .club-crest {
+  opacity: 0.78;
+}
+
 .team-score {
   font-family: var(--font-mono);
   font-weight: 700;

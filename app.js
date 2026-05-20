@@ -154,6 +154,75 @@ function computeLosersRanking(matches) {
 }
 
 // ============================================================
+// AUTO-PROPAGAÇÃO ENTRE FASES
+// ============================================================
+// Regras determinísticas que o JS preenche sozinho (sem precisar
+// editar a planilha). Valores manualmente preenchidos têm prioridade
+// — só auto-preenche se a célula correspondente estiver vazia.
+//
+// Repescagem (depende do ranking dos 6 derrotados da 1ª fase):
+//   RP1 = 3º colocado × 6º colocado (best-of-bottom-4 × pior)
+//   RP2 = 4º × 5º
+//   RF1 = 1º (melhor derrotado) × vencedor de RP1
+//   RF2 = 2º × vencedor de RP2
+//
+// Semis (vínculo direto com as quartas):
+//   SF1 = vencedor QF1 × vencedor QF2
+//   SF2 = vencedor QF3 × vencedor QF4
+//
+// Final:
+//   FINAL = vencedor SF1 × vencedor SF2
+//
+// Quartas (QF1..QF4) NÃO são auto-preenchidas — há sorteio manual
+// que mistura os 6 vencedores da 1ª fase com os 2 vencedores da RF.
+function winnerSide(m) {
+  if (!m || m.status !== "finalizado" || !m.winner) return null;
+  return m.winner === 1
+    ? { player: m.player1, club: m.club1 }
+    : { player: m.player2, club: m.club2 };
+}
+
+function fillSide(match, side, source) {
+  if (!match || !source || !source.player) return;
+  if (side === 1) {
+    if (!match.player1) { match.player1 = source.player; match.player1Auto = true; }
+    if (!match.club1)   match.club1   = source.club || "";
+  } else {
+    if (!match.player2) { match.player2 = source.player; match.player2Auto = true; }
+    if (!match.club2)   match.club2   = source.club || "";
+  }
+}
+
+function deriveMatches(matches, losers) {
+  const byId = Object.fromEntries(matches.map(m => [m.id, m]));
+
+  // Repescagem: precisa dos 6 derrotados ranqueados
+  if (losers.length === 6) {
+    const asSrc = i => ({ player: losers[i].name, club: losers[i].club });
+    fillSide(byId.RP1, 1, asSrc(2)); // 3º
+    fillSide(byId.RP1, 2, asSrc(5)); // 6º
+    fillSide(byId.RP2, 1, asSrc(3)); // 4º
+    fillSide(byId.RP2, 2, asSrc(4)); // 5º
+    fillSide(byId.RF1, 1, asSrc(0)); // 1º (melhor)
+    fillSide(byId.RF1, 2, winnerSide(byId.RP1));
+    fillSide(byId.RF2, 1, asSrc(1)); // 2º
+    fillSide(byId.RF2, 2, winnerSide(byId.RP2));
+  }
+
+  // Semis
+  fillSide(byId.SF1, 1, winnerSide(byId.QF1));
+  fillSide(byId.SF1, 2, winnerSide(byId.QF2));
+  fillSide(byId.SF2, 1, winnerSide(byId.QF3));
+  fillSide(byId.SF2, 2, winnerSide(byId.QF4));
+
+  // Final
+  fillSide(byId.FINAL, 1, winnerSide(byId.SF1));
+  fillSide(byId.FINAL, 2, winnerSide(byId.SF2));
+
+  return matches;
+}
+
+// ============================================================
 // RENDER
 // ============================================================
 const STATUS_LABEL = {
@@ -180,8 +249,10 @@ function renderBracket(matches) {
   }
 }
 
-function applyTeamSide(sideEl, playerName, clubName) {
+function applyTeamSide(sideEl, playerName, clubName, isAuto) {
   sideEl.querySelector(".team-name").textContent = playerName || "a definir";
+  const info = sideEl.querySelector(".team-info");
+  info.classList.toggle("auto-derived", !!isAuto && !!playerName);
   const img = sideEl.querySelector(".club-crest");
   const url = clubCrestURL(clubName);
   if (url) {
@@ -205,8 +276,8 @@ function renderMatch(m, tpl) {
   const t1 = node.querySelector(".team-1");
   const t2 = node.querySelector(".team-2");
 
-  applyTeamSide(t1, m.player1, m.club1);
-  applyTeamSide(t2, m.player2, m.club2);
+  applyTeamSide(t1, m.player1, m.club1, m.player1Auto);
+  applyTeamSide(t2, m.player2, m.club2, m.player2Auto);
   t1.querySelector(".team-score").textContent = m.score1 != null ? m.score1 : "–";
   t2.querySelector(".team-score").textContent = m.score2 != null ? m.score2 : "–";
 
@@ -257,8 +328,10 @@ async function refresh() {
   try {
     const rows = await loadData();
     const matches = rows.filter(r => r.jogo_id).map(buildMatch);
+    const losers = computeLosersRanking(matches);
+    deriveMatches(matches, losers);
     renderBracket(matches);
-    renderRanking(computeLosersRanking(matches));
+    renderRanking(losers);
     const now = new Date();
     lastUpdate.textContent = `atualizado ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
   } catch (err) {
