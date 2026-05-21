@@ -25,8 +25,8 @@ Página HTML estática que renderiza o chaveamento do campeonato lendo os result
 - Crie uma planilha nova com uma única aba chamada `Bracket`.
 - Use exatamente estas colunas na primeira linha:
 
-  | jogo_id | fase | jogador1 | clube1 | placar1 | jogador2 | clube2 | placar2 | status |
-  | ------- | ---- | -------- | ------ | ------- | -------- | ------ | ------- | ------ |
+  | jogo_id | fase | jogador1 | clube1 | placar1 | jogador2 | clube2 | placar2 | vencedor | status |
+  | ------- | ---- | -------- | ------ | ------- | -------- | ------ | ------- | -------- | ------ |
 
 - Copie as 18 linhas do arquivo [`sample.csv`](sample.csv) (Arquivo → Importar → Substituir planilha).
 - Os valores válidos para `status` são: `a_definir`, `ao_vivo`, `finalizado`.
@@ -84,6 +84,14 @@ Pronto. Manda no grupo e qualquer pessoa vê o bracket atualizar em tempo real c
 3. Quando começar um jogo, mude o `status` da linha para `ao_vivo` — o card pulsa em roxo na tela de todo mundo.
 4. Conforme rolam os gols, atualize `placar1` e `placar2`.
 5. Ao fim do jogo, mude o `status` para `finalizado`. O vencedor é detectado automaticamente (maior placar).
+
+### Empates (decisão por pênaltis / outro critério)
+
+Se o jogo terminar empatado (ex: 1×1) e for decidido por pênaltis ou outro critério extra, preencha a coluna **`vencedor`** com `1` ou `2` (referente ao `jogador1` ou `jogador2`).
+
+- A coluna `vencedor` **sobrescreve** a detecção automática pelo placar — útil também se quiser forçar manualmente um resultado.
+- Quando você marca um empate como finalizado e preenche `vencedor`, o card mostra "finalizado · decisão" no cabeçalho.
+- O **saldo de gols** desse jogo continua sendo 0 (porque os placares são iguais), então tanto o vencedor quanto o perdedor desse jogo entram no critério de desempate com saldo 0 — gols marcados e ordem na planilha viram os próximos critérios.
 
 ### O que é automático (você NÃO precisa preencher)
 

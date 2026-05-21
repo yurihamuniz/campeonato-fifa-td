@@ -108,11 +108,22 @@ function buildMatch(row) {
   const p1 = row.placar1 === "" ? null : Number(row.placar1);
   const p2 = row.placar2 === "" ? null : Number(row.placar2);
   const status = (row.status || "a_definir").toLowerCase();
+
+  // Vencedor: manual override (coluna "vencedor" = 1 ou 2) tem prioridade,
+  // útil em caso de empate decidido por pênaltis / decisão.
+  // Se não houver override, detecta pelo placar.
   let winner = null;
-  if (status === "finalizado" && p1 != null && p2 != null) {
+  const manualWinner = String(row.vencedor || "").trim();
+  if (manualWinner === "1") winner = 1;
+  else if (manualWinner === "2") winner = 2;
+  else if (status === "finalizado" && p1 != null && p2 != null) {
     if (p1 > p2) winner = 1;
     else if (p2 > p1) winner = 2;
+    // empate sem override = sem vencedor definido (saldo 0, mas ninguém avança)
   }
+
+  const isTie = p1 != null && p2 != null && p1 === p2 && winner != null;
+
   // Aceita os schemas antigo (time1/time2) e novo (jogador1/jogador2 + clube1/clube2)
   return {
     id: row.jogo_id,
@@ -125,6 +136,7 @@ function buildMatch(row) {
     score2: p2,
     status,
     winner,
+    isTie,
   };
 }
 
@@ -315,8 +327,12 @@ function renderMatch(m, tpl) {
   const node = tpl.content.firstElementChild.cloneNode(true);
   node.dataset.status = m.status;
   node.dataset.matchId = m.id;
+  if (m.isTie) node.dataset.tie = "true";
   node.querySelector(".match-id").textContent = m.id;
-  node.querySelector(".match-status").textContent = STATUS_LABEL[m.status] || m.status;
+  const statusLabel = m.isTie && m.status === "finalizado"
+    ? "finalizado · decisão"
+    : (STATUS_LABEL[m.status] || m.status);
+  node.querySelector(".match-status").textContent = statusLabel;
 
   const t1 = node.querySelector(".team-1");
   const t2 = node.querySelector(".team-2");
