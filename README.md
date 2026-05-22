@@ -93,31 +93,37 @@ Se o jogo terminar empatado (ex: 1×1) e for decidido por pênaltis ou outro cri
 - Quando você marca um empate como finalizado e preenche `vencedor`, o card mostra "finalizado · decisão" no cabeçalho.
 - O **saldo de gols** desse jogo continua sendo 0 (porque os placares são iguais), então tanto o vencedor quanto o perdedor desse jogo entram no critério de desempate com saldo 0 — gols marcados e ordem na planilha viram os próximos critérios.
 
-### O que é automático (você NÃO precisa preencher)
+### Modo "planilha é a verdade" (atual)
 
-A página calcula sozinha conforme os resultados acontecem:
+A constante `AUTO_DERIVE` em [`app.js`](app.js) está em `false`. Ou seja: **a página espelha 100% o que está na planilha**, sem aplicar nenhuma regra de propagação automática entre fases.
 
-| Linha    | Como é preenchida                                                       |
-| -------- | ----------------------------------------------------------------------- |
-| **RP1**  | 1º melhor derrotado × 6º melhor derrotado (1ª fase)                     |
-| **RP2**  | 2º × 5º melhores derrotados                                             |
-| **RP3**  | 3º × 4º melhores derrotados                                             |
-| **RF1**  | 2º melhor vencedor da F1 × 3º melhor vencedor da F1                     |
-| **FR**   | 1º melhor vencedor da F1 × vencedor da RF1                              |
-| **QF1.jogador2** | Vencedor da FR (a outra metade da QF1 é o Time M, preenchido manualmente) |
-| **SF1**  | Vencedor da QF1 × vencedor da QF2                                       |
-| **SF2**  | Vencedor da QF3 × vencedor da QF4                                       |
-| **FINAL**| Vencedor da SF1 × vencedor da SF2                                       |
+Esse modo foi adotado porque o formato real pode mudar no meio do torneio (gente que precisa sair mais cedo, troca de chaveamento, etc). Ter a planilha como fonte única de verdade evita conflitos.
 
-Os nomes auto-preenchidos aparecem em itálico para diferenciar dos digitados à mão. Se você quiser sobrescrever, basta preencher manualmente na planilha — o valor manual sempre tem prioridade.
+**Você precisa preencher manualmente:**
 
-Ranking (derrotados e vencedores da F1) usa: **saldo de gols → gols marcados → ordem na planilha** como critério de desempate.
+- `jogador1`/`clube1`/`jogador2`/`clube2` de **TODAS** as linhas (J1–J6, RP1–RP3, RF1, FR, QF1–QF4, SF1, SF2, FINAL)
+- `placar1`, `placar2`, `status` conforme os jogos acontecem
+- `vencedor` (1 ou 2) em caso de empate decidido por pênaltis
 
-### O que continua manual
+**O que o JS ainda faz sozinho:**
 
-- **Time M na QF1**: preencher `jogador1`/`clube1` da linha `QF1` no início.
-- Placares e status de cada jogo (você joga e digita).
-- **Sorteio de QF2, QF3, QF4**: depois que todos os 6 jogos da 1ª fase terminarem, sorteia os 6 vencedores em 3 pares. Use a [página de sorteio](sorteio.html) (link no rodapé do bracket) — ela faz a animação ao vivo, e depois você só copia o resultado pras linhas `QF2`, `QF3` e `QF4` da planilha.
+- Detecta vencedor pelo placar (ou pela coluna `vencedor`)
+- Calcula o ranking dos derrotados (sidebar) — saldo → gols → ordem na planilha
+- Marca vencedor visualmente no card
+
+### Como reativar a auto-propagação
+
+Se quiser voltar pro modo automático em algum torneio futuro, é só trocar:
+
+```js
+const AUTO_DERIVE = false;  →  const AUTO_DERIVE = true;
+```
+
+A lógica original continua intacta no código (função `deriveMatches`), só não é chamada quando o flag está em `false`.
+
+### Sorteio das quartas
+
+A [página de sorteio](sorteio.html) continua funcionando independente do `AUTO_DERIVE`. Ela lê os 6 vencedores da 1ª fase e sorteia QF2, QF3 e QF4 com animação — depois você copia o resultado pra planilha.
 
 ## Página de sorteio (`sorteio.html`)
 

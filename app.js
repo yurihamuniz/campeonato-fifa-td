@@ -10,6 +10,12 @@ const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjVVtDYX
 const REFRESH_INTERVAL_MS = 20_000;
 const FALLBACK_CSV_URL = "sample.csv";
 
+// Quando true, o JS preenche automaticamente RP/RF/FR/SF/Final baseado nas
+// regras do regulamento. Quando false, o bracket espelha 100% a planilha:
+// admin preenche todas as células manualmente. Útil quando o formato muda
+// no meio do torneio (ex: alguém precisa sair mais cedo).
+const AUTO_DERIVE = false;
+
 // Ordem oficial das fases no bracket (13 participantes — Time M tem bye)
 const PHASES = [
   { id: "primeira",        match_ids: ["J1","J2","J3","J4","J5","J6"] },
@@ -390,8 +396,10 @@ async function refresh() {
     const rows = await loadData();
     const matches = rows.filter(r => r.jogo_id).map(buildMatch);
     const losers = computeLosersRanking(matches);
-    const repWinners = computeRepescagemWinnersRanking(matches);
-    deriveMatches(matches, losers, repWinners);
+    if (AUTO_DERIVE) {
+      const repWinners = computeRepescagemWinnersRanking(matches);
+      deriveMatches(matches, losers, repWinners);
+    }
     renderBracket(matches);
     renderRanking(losers);
     const now = new Date();
