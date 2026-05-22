@@ -117,15 +117,31 @@ Ranking (derrotados e vencedores da F1) usa: **saldo de gols → gols marcados �
 
 - **Time M na QF1**: preencher `jogador1`/`clube1` da linha `QF1` no início.
 - Placares e status de cada jogo (você joga e digita).
-- **Sorteio de QF2, QF3, QF4**: depois que todos os 6 jogos da 1ª fase terminarem, sorteia os 6 vencedores em 3 pares e preenche os 4 campos de cada uma dessas 3 linhas.
+- **Sorteio de QF2, QF3, QF4**: depois que todos os 6 jogos da 1ª fase terminarem, sorteia os 6 vencedores em 3 pares. Use a [página de sorteio](sorteio.html) (link no rodapé do bracket) — ela faz a animação ao vivo, e depois você só copia o resultado pras linhas `QF2`, `QF3` e `QF4` da planilha.
+
+## Página de sorteio (`sorteio.html`)
+
+Página separada com animação tipo slot machine pra sortear as quartas:
+
+- Lê os 6 vencedores da 1ª fase da mesma planilha
+- Mostra a QF1 já definida (Time M × Vencedor da Repescagem)
+- Botão grande "SORTEAR QF2, QF3 e QF4" — clica e roda a animação
+- Cada slot fica girando ~2s e revela o nome com efeito de pop
+- Depois mostra a lista pronta pra copiar pra planilha
+- Botão "sortear de novo" caso queira refazer
+
+Antes de todos os 6 jogos da 1ª fase estarem `finalizado`, a página mostra "aguardando" e lista quais jogos faltam.
 
 ## Estrutura dos arquivos
 
 ```
 campeonato-fifa-td/
-├── index.html        # estrutura do bracket
+├── index.html        # bracket principal
 ├── style.css         # paleta TD B2B + layout responsivo
 ├── app.js            # fetch da planilha + render + auto-refresh
+├── sorteio.html      # página dedicada de sorteio das quartas
+├── sorteio.css       # estilos do sorteio
+├── sorteio.js        # animação do sorteio + lógica
 ├── sample.csv        # planilha-modelo (importar no Google Sheets)
 ├── README.md         # este arquivo
 └── assets/
