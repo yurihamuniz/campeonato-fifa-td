@@ -12,7 +12,7 @@
 // Mata-mata: semeado automaticamente da classificação (configurável).
 // ============================================================
 
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/119-O1zM4OZ3W-PAm9uNLctxkSZJPII84ePdu3t-JUug/export?format=csv&gid=278622039";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjVVtDYXYTcfy2tevgpRII-NUmBMiVQ5-nZ0_9atvNjeu6ts8B418Vkc1iqCc_MxgsR29_ev8gQ-6R/pub?gid=278622039&single=true&output=csv";
 const REFRESH_INTERVAL_MS = 20_000;
 const FALLBACK_CSV_URL = "sample.csv";
 
