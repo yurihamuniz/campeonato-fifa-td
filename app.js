@@ -1,81 +1,85 @@
 // ============================================================
-// CONFIGURAÇÃO
+// CAMPEONATO FIFA TD — Fase de grupos + mata-mata (14 participantes)
 // ============================================================
-// Cole aqui a URL da planilha Google publicada como CSV.
-// Como gerar: Arquivo > Compartilhar > Publicar na web > formato CSV > publicar.
-// A URL fica no formato: https://docs.google.com/spreadsheets/d/e/<id>/pub?output=csv
+// A página lê uma planilha Google publicada como CSV. Há dois tipos
+// de linha (coluna "tipo"):
+//   participante → posicao(id), nome, clube
+//   jogo         → id, grupo, pos1, pos2, placar1, placar2, vencedor, status
 //
-// Enquanto a planilha não estiver pronta, deixe vazio para usar o sample.csv local.
+// Fase de grupos: 2 grupos de 7 (A = posições ímpares, B = pares).
+// Cada um joga 4 partidas. A classificação é calculada (Pts → saldo →
+// gols → confronto direto → posição do sorteio).
+// Mata-mata: semeado automaticamente da classificação (configurável).
+// ============================================================
+
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjVVtDYXYTcfy2tevgpRII-NUmBMiVQ5-nZ0_9atvNjeu6ts8B418Vkc1iqCc_MxgsR29_ev8gQ-6R/pub?gid=0&single=true&output=csv";
 const REFRESH_INTERVAL_MS = 20_000;
 const FALLBACK_CSV_URL = "sample.csv";
 
-// Quando true, o JS preenche automaticamente RP/RF/FR/SF/Final baseado nas
-// regras do regulamento. Quando false, o bracket espelha 100% a planilha:
-// admin preenche todas as células manualmente. Útil quando o formato muda
-// no meio do torneio (ex: alguém precisa sair mais cedo).
-const AUTO_DERIVE = false;
+// Semeia o mata-mata a partir da classificação calculada.
+// Se false, os confrontos do mata-mata vêm só do que estiver na planilha
+// (colunas pos1/pos2 das linhas QF/SF/etc).
+const SEED_KNOCKOUT_FROM_STANDINGS = true;
 
-// Ordem oficial das fases no bracket (13 participantes — Time M tem bye)
-const PHASES = [
-  { id: "primeira",        match_ids: ["J1","J2","J3","J4","J5","J6"] },
-  { id: "repescagem_f1",   match_ids: ["RP1","RP2","RP3"] },
-  { id: "repescagem_f2",   match_ids: ["RF1"] },
-  { id: "repescagem_final",match_ids: ["FR"] },
-  { id: "quartas",         match_ids: ["QF1","QF2","QF3","QF4"] },
-  { id: "semis",           match_ids: ["SF1","SF2"] },
-  { id: "final",           match_ids: ["FINAL"] },
-];
+// ============================================================
+// CHAVEAMENTO FIXO DA FASE DE GRUPOS (por posição do sorteio)
+// ============================================================
+const GROUP_FIXTURES = {
+  // Grupo A — posições ímpares 1,3,5,7,9,11,13
+  GA1: [1, 3],  GA2: [1, 5],  GA3: [1, 7],  GA4: [1, 11],
+  GA5: [3, 5],  GA6: [3, 7],  GA7: [3, 13], GA8: [5, 9],
+  GA9: [5, 13], GA10:[7, 9],  GA11:[7, 11], GA12:[9, 11],
+  GA13:[9, 13], GA14:[11, 13],
+  // Grupo B — posições pares 2,4,6,8,10,12,14
+  GB1: [2, 4],  GB2: [2, 6],  GB3: [2, 8],  GB4: [2, 12],
+  GB5: [4, 6],  GB6: [4, 8],  GB7: [4, 14], GB8: [6, 10],
+  GB9: [6, 14], GB10:[8, 10], GB11:[8, 12], GB12:[10, 12],
+  GB13:[10, 14],GB14:[12, 14],
+};
+const GROUP_A_IDS = Object.keys(GROUP_FIXTURES).filter(id => id.startsWith("GA"));
+const GROUP_B_IDS = Object.keys(GROUP_FIXTURES).filter(id => id.startsWith("GB"));
 
-// Mapa de clubes → arquivo do escudo em assets/clubs/<slug>.png
-// O nome canônico (chave) deve ser usado nas colunas clube1/clube2 da planilha.
-const CLUBS = {
-  "Real Madrid":         "real-madrid",
-  "Barcelona":           "barcelona",
-  "PSG":                 "psg",
-  "Bayern de Munique":   "bayern",
-  "Liverpool":           "liverpool",
-  "Arsenal":             "arsenal",
-  "Manchester City":     "man-city",
-  "Inter de Milão":      "inter",
-  "Atlético de Madrid":  "atletico",
-  "Napoli":              "napoli",
-  "Borussia Dortmund":   "dortmund",
-  "Milan":               "milan",
-  "Newcastle United":    "newcastle",
-  "Tottenham":           "tottenham",
-  "Juventus":            "juventus",
-  "RB Leipzig":          "leipzig",
-  "Bayer Leverkusen":    "leverkusen",
-  "Chelsea":             "chelsea",
-  "Manchester United":   "man-united",
-  "Galatasaray":         "galatasaray",
+const KNOCKOUT_META = {
+  QF1: { label: "QF1", phase: "quartas" },
+  QF2: { label: "QF2", phase: "quartas" },
+  QF3: { label: "QF3", phase: "quartas" },
+  QF4: { label: "QF4", phase: "quartas" },
+  SF1: { label: "Semi 1", phase: "semis" },
+  SF2: { label: "Semi 2", phase: "semis" },
+  TER: { label: "3º lugar", phase: "terceiro" },
+  FINAL: { label: "Final", phase: "final" },
 };
 
-// Tolera variações de grafia/acentuação (PSG, psg, "Atletico Madrid", etc)
-const _normalizeClub = s => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-const CLUBS_NORM = Object.fromEntries(
-  Object.entries(CLUBS).map(([name, slug]) => [_normalizeClub(name), slug])
-);
-
-function clubCrestURL(clubeName) {
-  if (!clubeName) return null;
-  const slug = CLUBS_NORM[_normalizeClub(clubeName)];
+// ============================================================
+// ESCUDOS
+// ============================================================
+const CLUBS = {
+  "Real Madrid":"real-madrid","Barcelona":"barcelona","PSG":"psg",
+  "Bayern de Munique":"bayern","Liverpool":"liverpool","Arsenal":"arsenal",
+  "Manchester City":"man-city","Inter de Milão":"inter",
+  "Atlético de Madrid":"atletico","Napoli":"napoli","Borussia Dortmund":"dortmund",
+  "Milan":"milan","Newcastle United":"newcastle","Tottenham":"tottenham",
+  "Juventus":"juventus","RB Leipzig":"leipzig","Bayer Leverkusen":"leverkusen",
+  "Chelsea":"chelsea","Manchester United":"man-united","Galatasaray":"galatasaray",
+};
+const _normClub = s => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+const CLUBS_NORM = Object.fromEntries(Object.entries(CLUBS).map(([n,s]) => [_normClub(n), s]));
+function clubCrestURL(name) {
+  if (!name) return null;
+  const slug = CLUBS_NORM[_normClub(name)];
   return slug ? `assets/clubs/${slug}.png` : null;
 }
 
 // ============================================================
-// FETCH + PARSE
+// FETCH + PARSE CSV
 // ============================================================
 async function loadData() {
   const url = SHEET_CSV_URL || FALLBACK_CSV_URL;
   const sep = url.includes("?") ? "&" : "?";
   const res = await fetch(`${url}${sep}_t=${Date.now()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  return parseCSV(text);
+  return parseCSV(await res.text());
 }
-
 function parseCSV(text) {
   const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim());
   if (!lines.length) return [];
@@ -87,303 +91,329 @@ function parseCSV(text) {
     return obj;
   });
 }
-
-// CSV split that handles quoted cells with commas
 function splitLine(line) {
-  const out = [];
-  let cur = "", inQuote = false;
+  const out = []; let cur = "", inQuote = false;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (c === '"') {
-      if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
       else inQuote = !inQuote;
-    } else if (c === "," && !inQuote) {
-      out.push(cur); cur = "";
-    } else {
-      cur += c;
-    }
+    } else if (c === "," && !inQuote) { out.push(cur); cur = ""; }
+    else cur += c;
   }
-  out.push(cur);
-  return out;
+  out.push(cur); return out;
 }
+
+const num = v => (v === "" || v == null) ? null : Number(v);
 
 // ============================================================
 // MODELO
 // ============================================================
-function buildMatch(row) {
-  const p1 = row.placar1 === "" ? null : Number(row.placar1);
-  const p2 = row.placar2 === "" ? null : Number(row.placar2);
-  const status = (row.status || "a_definir").toLowerCase();
+// Retorna { participants: {pos: {pos,nome,clube,grupo}}, gamesById: {id: rawGame} }
+function buildModel(rows) {
+  const participants = {};
+  const gamesById = {};
 
-  // Vencedor: manual override (coluna "vencedor" = 1 ou 2) tem prioridade,
-  // útil em caso de empate decidido por pênaltis / decisão.
-  // Se não houver override, detecta pelo placar.
-  let winner = null;
-  const manualWinner = String(row.vencedor || "").trim();
-  if (manualWinner === "1") winner = 1;
-  else if (manualWinner === "2") winner = 2;
-  else if (status === "finalizado" && p1 != null && p2 != null) {
-    if (p1 > p2) winner = 1;
-    else if (p2 > p1) winner = 2;
-    // empate sem override = sem vencedor definido (saldo 0, mas ninguém avança)
+  for (const r of rows) {
+    const tipo = (r.tipo || "").toLowerCase();
+    if (tipo === "participante") {
+      const pos = num(r.id ?? r.posicao);
+      if (pos == null) continue;
+      participants[pos] = {
+        pos,
+        nome: r.nome || "",
+        clube: r.clube || "",
+        grupo: (r.grupo || (pos % 2 === 1 ? "A" : "B")).toUpperCase(),
+      };
+    } else if (tipo === "jogo" || !tipo) {
+      // aceita linhas sem tipo desde que tenham id (compat)
+      const id = (r.id || r.jogo_id || "").trim();
+      if (!id) continue;
+      gamesById[id] = {
+        id,
+        grupo: (r.grupo || "").toUpperCase(),
+        pos1: num(r.pos1),
+        pos2: num(r.pos2),
+        score1: num(r.placar1),
+        score2: num(r.placar2),
+        vencedorManual: String(r.vencedor || "").trim(),
+        status: (r.status || "a_definir").toLowerCase(),
+      };
+    }
   }
-
-  const isTie = p1 != null && p2 != null && p1 === p2 && winner != null;
-
-  // Aceita os schemas antigo (time1/time2) e novo (jogador1/jogador2 + clube1/clube2)
-  return {
-    id: row.jogo_id,
-    phase: (row.fase || "").toLowerCase(),
-    player1: row.jogador1 || row.time1 || "",
-    player2: row.jogador2 || row.time2 || "",
-    club1:   row.clube1 || "",
-    club2:   row.clube2 || "",
-    score1: p1,
-    score2: p2,
-    status,
-    winner,
-    isTie,
-  };
+  return { participants, gamesById };
 }
 
-function computeLosersRanking(matches) {
-  const primeira = matches.filter(m => m.phase === "primeira" && m.status === "finalizado" && m.winner);
-  const losers = primeira.map(m => {
-    const loserIsP1 = m.winner === 2;
-    const name = loserIsP1 ? m.player1 : m.player2;
-    const club = loserIsP1 ? m.club1 : m.club2;
-    const scoreFor = loserIsP1 ? m.score1 : m.score2;
-    const scoreAgainst = loserIsP1 ? m.score2 : m.score1;
-    return {
-      name,
-      club,
-      saldo: scoreFor - scoreAgainst,
-      feitos: scoreFor,
-      sourceMatch: m.id,
-    };
-  });
-  return rankBySaldo(losers);
+function participantSide(participants, pos) {
+  const p = pos != null ? participants[pos] : null;
+  return p ? { nome: p.nome, clube: p.clube } : null;
 }
 
-// Ranking dos 3 vencedores da Repescagem F1 (RP1, RP2, RP3)
-// Mesmo critério: saldo → gols feitos → ordem (RP1 < RP2 < RP3 em caso de empate).
-function computeRepescagemWinnersRanking(matches) {
-  const rpMatches = ["RP1","RP2","RP3"]
-    .map(id => matches.find(m => m.id === id))
-    .filter(m => m && m.status === "finalizado" && m.winner);
-  const winners = rpMatches.map(m => {
-    const winnerIsP1 = m.winner === 1;
-    const name = winnerIsP1 ? m.player1 : m.player2;
-    const club = winnerIsP1 ? m.club1 : m.club2;
-    const scoreFor = winnerIsP1 ? m.score1 : m.score2;
-    const scoreAgainst = winnerIsP1 ? m.score2 : m.score1;
-    return {
-      name,
-      club,
-      saldo: scoreFor - scoreAgainst,
-      feitos: scoreFor,
-      sourceMatch: m.id,
-    };
-  });
-  return rankBySaldo(winners);
-}
-
-function rankBySaldo(items) {
-  return items
-    .map((it, idx) => ({ ...it, _idx: idx }))
-    .sort((a, b) => {
-      if (b.saldo !== a.saldo) return b.saldo - a.saldo;
-      if (b.feitos !== a.feitos) return b.feitos - a.feitos;
-      return a._idx - b._idx;
+// Constrói os objetos de jogo da fase de grupos a partir do fixture fixo.
+function buildGroupGames(participants, gamesById) {
+  const make = (ids) => ids.map(id => {
+    const raw = gamesById[id] || {};
+    const [defA, defB] = GROUP_FIXTURES[id];
+    const pos1 = raw.pos1 ?? defA;
+    const pos2 = raw.pos2 ?? defB;
+    return normalizeGameObject({
+      id, displayId: id, phase: "grupos",
+      grupo: id.startsWith("GA") ? "A" : "B",
+      s1: participantSide(participants, pos1),
+      s2: participantSide(participants, pos2),
+      pos1, pos2,
+      score1: raw.score1 ?? null,
+      score2: raw.score2 ?? null,
+      vencedorManual: raw.vencedorManual || "",
+      status: raw.status || "a_definir",
+      groupGame: true,
     });
+  });
+  return { A: make(GROUP_A_IDS), B: make(GROUP_B_IDS) };
+}
+
+// Calcula vencedor (1/2/null). Em grupos, empate é válido (winner=null).
+// Fora de grupos, usa override "vencedor" e não permite empate sem decisão.
+function normalizeGameObject(g) {
+  let winner = null;
+  if (!g.groupGame && g.vencedorManual === "1") winner = 1;
+  else if (!g.groupGame && g.vencedorManual === "2") winner = 2;
+  else if (g.status === "finalizado" && g.score1 != null && g.score2 != null) {
+    if (g.score1 > g.score2) winner = 1;
+    else if (g.score2 > g.score1) winner = 2;
+  }
+  const isTie = g.score1 != null && g.score2 != null && g.score1 === g.score2;
+  return { ...g, winner, isTie };
 }
 
 // ============================================================
-// AUTO-PROPAGAÇÃO ENTRE FASES (13 participantes — Time M tem bye)
+// CLASSIFICAÇÃO DOS GRUPOS
 // ============================================================
-// Regras determinísticas que o JS preenche sozinho. Valores
-// manualmente preenchidos têm prioridade — só auto-preenche se a
-// célula correspondente estiver vazia.
-//
-// Repescagem F1 (todos os 6 derrotados, pareados melhor × pior):
-//   RP1 = 1º melhor derrotado × 6º melhor derrotado
-//   RP2 = 2º melhor × 5º melhor
-//   RP3 = 3º melhor × 4º melhor
-//
-// Repescagem F2 (3 vencedores da F1 ranqueados por saldo):
-//   RF1 = 2º melhor vencedor F1 × 3º melhor vencedor F1
-//   (o 1º melhor vencedor F1 vai direto pra Final da Repescagem)
-//
-// Final da Repescagem:
-//   FR = 1º melhor vencedor F1 × vencedor RF1
-//
-// Quartas:
-//   QF1.jogador2 = vencedor FR (Time M em QF1.jogador1 é manual)
-//   QF2, QF3, QF4: manuais (sorteio entre os 6 vencedores da 1ª fase)
-//
-// Semis: SF1 = QF1 × QF2, SF2 = QF3 × QF4
-// Final: vencedor SF1 × vencedor SF2
-function winnerSide(m) {
-  if (!m || m.status !== "finalizado" || !m.winner) return null;
-  return m.winner === 1
-    ? { player: m.player1, club: m.club1 }
-    : { player: m.player2, club: m.club2 };
+function computeStandings(participants, groupGames, grupo) {
+  const rec = {};
+  for (const p of Object.values(participants)) {
+    if (p.grupo !== grupo) continue;
+    rec[p.pos] = { ...p, J:0, V:0, E:0, D:0, GP:0, GC:0, SG:0, Pts:0 };
+  }
+  for (const g of groupGames) {
+    if (g.status !== "finalizado" || g.score1 == null || g.score2 == null) continue;
+    const a = rec[g.pos1], b = rec[g.pos2];
+    if (!a || !b) continue;
+    a.J++; b.J++;
+    a.GP += g.score1; a.GC += g.score2;
+    b.GP += g.score2; b.GC += g.score1;
+    if (g.score1 > g.score2) { a.V++; b.D++; a.Pts += 3; }
+    else if (g.score2 > g.score1) { b.V++; a.D++; b.Pts += 3; }
+    else { a.E++; b.E++; a.Pts += 1; b.Pts += 1; }
+  }
+  for (const k in rec) rec[k].SG = rec[k].GP - rec[k].GC;
+  return rankGroup(Object.values(rec), groupGames);
 }
 
-function fillSide(match, side, source) {
-  if (!match || !source || !source.player) return;
-  if (side === 1) {
-    if (!match.player1) { match.player1 = source.player; match.player1Auto = true; }
-    if (!match.club1)   match.club1   = source.club || "";
-  } else {
-    if (!match.player2) { match.player2 = source.player; match.player2Auto = true; }
-    if (!match.club2)   match.club2   = source.club || "";
+// Pts → SG → GP → confronto direto → posição (sorteio)
+function rankGroup(arr, games) {
+  arr.sort((a, b) => b.Pts - a.Pts || b.SG - a.SG || b.GP - a.GP || a.pos - b.pos);
+  const out = []; let i = 0;
+  while (i < arr.length) {
+    let j = i + 1;
+    while (j < arr.length &&
+           arr[j].Pts === arr[i].Pts &&
+           arr[j].SG === arr[i].SG &&
+           arr[j].GP === arr[i].GP) j++;
+    const cluster = arr.slice(i, j);
+    if (cluster.length > 1) {
+      const h2h = h2hPoints(cluster.map(c => c.pos), games);
+      cluster.sort((a, b) => (h2h[b.pos] - h2h[a.pos]) || a.pos - b.pos);
+    }
+    out.push(...cluster); i = j;
   }
+  return out;
 }
 
-function deriveMatches(matches, losers, repWinners) {
-  const byId = Object.fromEntries(matches.map(m => [m.id, m]));
+function h2hPoints(positions, games) {
+  const set = new Set(positions);
+  const pts = {}; positions.forEach(p => pts[p] = 0);
+  for (const g of games) {
+    if (g.status !== "finalizado" || g.score1 == null || g.score2 == null) continue;
+    if (set.has(g.pos1) && set.has(g.pos2)) {
+      if (g.score1 > g.score2) pts[g.pos1] += 3;
+      else if (g.score2 > g.score1) pts[g.pos2] += 3;
+      else { pts[g.pos1] += 1; pts[g.pos2] += 1; }
+    }
+  }
+  return pts;
+}
 
-  // Repescagem F1: precisa dos 6 derrotados ranqueados (best × worst)
-  if (losers.length === 6) {
-    const asSrc = i => ({ player: losers[i].name, club: losers[i].club });
-    fillSide(byId.RP1, 1, asSrc(0)); // 1º melhor
-    fillSide(byId.RP1, 2, asSrc(5)); // 6º
-    fillSide(byId.RP2, 1, asSrc(1)); // 2º
-    fillSide(byId.RP2, 2, asSrc(4)); // 5º
-    fillSide(byId.RP3, 1, asSrc(2)); // 3º
-    fillSide(byId.RP3, 2, asSrc(3)); // 4º
+function isGroupComplete(groupGames) {
+  return groupGames.every(g => g.status === "finalizado" && g.score1 != null && g.score2 != null);
+}
+
+// ============================================================
+// MATA-MATA
+// ============================================================
+function sideOfStanding(standing, idx) {
+  const p = standing[idx];
+  return p ? { nome: p.nome, clube: p.clube } : null;
+}
+function winnerSideKO(g) {
+  if (!g || !g.winner) return null;
+  return g.winner === 1 ? g.s1 : g.s2;
+}
+function loserSideKO(g) {
+  if (!g || !g.winner) return null;
+  return g.winner === 1 ? g.s2 : g.s1;
+}
+
+function buildKnockout(participants, gamesById, rankA, rankB, groupsDone) {
+  const ko = {};
+  for (const id of Object.keys(KNOCKOUT_META)) {
+    const raw = gamesById[id] || {};
+    ko[id] = normalizeGameObject({
+      id, displayId: KNOCKOUT_META[id].label, phase: KNOCKOUT_META[id].phase,
+      // override manual da planilha (pos1/pos2) tem prioridade
+      s1: participantSide(participants, raw.pos1),
+      s2: participantSide(participants, raw.pos2),
+      score1: raw.score1 ?? null,
+      score2: raw.score2 ?? null,
+      vencedorManual: raw.vencedorManual || "",
+      status: raw.status || "a_definir",
+      groupGame: false,
+    });
   }
 
-  // Repescagem F2 (RF1) e Final da Repescagem (FR):
-  // precisam dos 3 vencedores da F1 ranqueados
-  if (repWinners.length === 3) {
-    const asSrc = i => ({ player: repWinners[i].name, club: repWinners[i].club });
-    // RF1 = 2º melhor × 3º melhor vencedor F1
-    fillSide(byId.RF1, 1, asSrc(1));
-    fillSide(byId.RF1, 2, asSrc(2));
-    // FR = 1º melhor vencedor F1 × vencedor RF1
-    fillSide(byId.FR, 1, asSrc(0));
+  if (SEED_KNOCKOUT_FROM_STANDINGS && groupsDone) {
+    // Quartas: 1ºA×4ºB, 2ºA×3ºB, 1ºB×4ºA, 2ºB×3ºA
+    seedSlot(ko.QF1, 1, sideOfStanding(rankA, 0));
+    seedSlot(ko.QF1, 2, sideOfStanding(rankB, 3));
+    seedSlot(ko.QF2, 1, sideOfStanding(rankA, 1));
+    seedSlot(ko.QF2, 2, sideOfStanding(rankB, 2));
+    seedSlot(ko.QF3, 1, sideOfStanding(rankB, 0));
+    seedSlot(ko.QF3, 2, sideOfStanding(rankA, 3));
+    seedSlot(ko.QF4, 1, sideOfStanding(rankB, 1));
+    seedSlot(ko.QF4, 2, sideOfStanding(rankA, 2));
   }
-  // FR.jogador2 = vencedor de RF1 (mesmo se repWinners ainda não estiver completo,
-  // se RF1 for finalizado o vencedor já está definido)
-  fillSide(byId.FR, 2, winnerSide(byId.RF1));
 
-  // Quartas — apenas QF1.jogador2 (Time M em QF1.jogador1 é manual)
-  fillSide(byId.QF1, 2, winnerSide(byId.FR));
+  // Semis a partir das quartas
+  seedSlot(ko.SF1, 1, winnerSideKO(ko.QF1));
+  seedSlot(ko.SF1, 2, winnerSideKO(ko.QF2));
+  seedSlot(ko.SF2, 1, winnerSideKO(ko.QF3));
+  seedSlot(ko.SF2, 2, winnerSideKO(ko.QF4));
 
-  // Semis
-  fillSide(byId.SF1, 1, winnerSide(byId.QF1));
-  fillSide(byId.SF1, 2, winnerSide(byId.QF2));
-  fillSide(byId.SF2, 1, winnerSide(byId.QF3));
-  fillSide(byId.SF2, 2, winnerSide(byId.QF4));
+  // 3º lugar e final
+  seedSlot(ko.TER, 1, loserSideKO(ko.SF1));
+  seedSlot(ko.TER, 2, loserSideKO(ko.SF2));
+  seedSlot(ko.FINAL, 1, winnerSideKO(ko.SF1));
+  seedSlot(ko.FINAL, 2, winnerSideKO(ko.SF2));
 
-  // Final
-  fillSide(byId.FINAL, 1, winnerSide(byId.SF1));
-  fillSide(byId.FINAL, 2, winnerSide(byId.SF2));
+  return ko;
+}
 
-  return matches;
+// Só preenche se o lado ainda estiver vazio (manual da planilha vence)
+function seedSlot(game, side, src) {
+  if (!game || !src || !src.nome) return;
+  if (side === 1 && !game.s1) game.s1 = src;
+  if (side === 2 && !game.s2) game.s2 = src;
 }
 
 // ============================================================
 // RENDER
 // ============================================================
-const STATUS_LABEL = {
-  a_definir: "a definir",
-  ao_vivo: "ao vivo",
-  finalizado: "finalizado",
-};
+const STATUS_LABEL = { a_definir: "a definir", ao_vivo: "ao vivo", finalizado: "finalizado" };
 
-function renderBracket(matches) {
-  const byId = Object.fromEntries(matches.map(m => [m.id, m]));
-  const tpl = document.getElementById("match-template");
-
-  for (const phase of PHASES) {
-    const container = document.getElementById(`matches-${phase.id}`);
-    container.innerHTML = "";
-    for (const matchId of phase.match_ids) {
-      const m = byId[matchId] || {
-        id: matchId, phase: phase.id, player1: "", player2: "",
-        club1: "", club2: "",
-        score1: null, score2: null, status: "a_definir", winner: null,
-      };
-      container.appendChild(renderMatch(m, tpl));
-    }
-  }
+function crestImg(club, extraClass = "") {
+  const url = clubCrestURL(club);
+  return url
+    ? `<img class="club-crest ${extraClass}" src="${url}" alt="${escapeHTML(club)}">`
+    : `<span class="club-crest ${extraClass} crest-placeholder"></span>`;
 }
 
-function applyTeamSide(sideEl, playerName, clubName, isAuto) {
-  sideEl.querySelector(".team-name").textContent = playerName || "a definir";
-  const info = sideEl.querySelector(".team-info");
-  info.classList.toggle("auto-derived", !!isAuto && !!playerName);
+function renderStandings(containerId, standing, complete) {
+  const el = document.getElementById(containerId);
+  const rows = standing.map((p, i) => {
+    const qualified = i < 4 ? "qualified" : "";
+    return `
+      <tr class="${qualified}">
+        <td class="pos">${i + 1}</td>
+        <td class="player">
+          ${crestImg(p.clube, "crest-xs")}
+          <span class="pl-name">${escapeHTML(p.nome || "—")}</span>
+        </td>
+        <td>${p.J}</td>
+        <td>${p.V}</td>
+        <td>${p.E}</td>
+        <td>${p.D}</td>
+        <td class="hide-sm">${p.GP}</td>
+        <td class="hide-sm">${p.GC}</td>
+        <td>${p.SG >= 0 ? "+" : ""}${p.SG}</td>
+        <td class="pts">${p.Pts}</td>
+      </tr>`;
+  }).join("");
+
+  el.innerHTML = `
+    <table class="standings">
+      <thead>
+        <tr>
+          <th class="pos">#</th>
+          <th class="player">Jogador</th>
+          <th title="Jogos">J</th>
+          <th title="Vitórias">V</th>
+          <th title="Empates">E</th>
+          <th title="Derrotas">D</th>
+          <th class="hide-sm" title="Gols pró">GP</th>
+          <th class="hide-sm" title="Gols contra">GC</th>
+          <th title="Saldo de gols">SG</th>
+          <th class="pts" title="Pontos">Pts</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${complete ? "" : `<p class="standings-note">Classificação provisória — atualiza conforme os jogos terminam</p>`}
+  `;
+}
+
+function renderMatchCards(containerId, games, tpl) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  for (const g of games) el.appendChild(renderMatch(g, tpl));
+}
+
+function applySide(sideEl, side) {
+  const nameEl = sideEl.querySelector(".team-name");
   const img = sideEl.querySelector(".club-crest");
-  const url = clubCrestURL(clubName);
-  if (url) {
-    img.src = url;
-    img.alt = clubName;
-    img.hidden = false;
-  } else {
-    img.hidden = true;
-    img.removeAttribute("src");
-    img.alt = "";
-  }
+  nameEl.textContent = side?.nome || "a definir";
+  sideEl.classList.toggle("empty", !side?.nome);
+  const url = clubCrestURL(side?.clube);
+  if (url) { img.src = url; img.alt = side.clube; img.hidden = false; }
+  else { img.hidden = true; img.removeAttribute("src"); img.alt = ""; }
 }
 
-function renderMatch(m, tpl) {
+function renderMatch(g, tpl) {
   const node = tpl.content.firstElementChild.cloneNode(true);
-  node.dataset.status = m.status;
-  node.dataset.matchId = m.id;
-  if (m.isTie) node.dataset.tie = "true";
-  node.querySelector(".match-id").textContent = m.id;
-  const statusLabel = m.isTie && m.status === "finalizado"
-    ? "finalizado · decisão"
-    : (STATUS_LABEL[m.status] || m.status);
-  node.querySelector(".match-status").textContent = statusLabel;
+  node.dataset.status = g.status;
+  node.dataset.matchId = g.id;
+  if (g.isTie && g.status === "finalizado") node.dataset.tie = "true";
+  node.querySelector(".match-id").textContent = g.displayId || g.id;
+  const tie = g.isTie && g.status === "finalizado" && !g.groupGame;
+  node.querySelector(".match-status").textContent =
+    tie ? "decisão" : (STATUS_LABEL[g.status] || g.status);
 
   const t1 = node.querySelector(".team-1");
   const t2 = node.querySelector(".team-2");
+  applySide(t1, g.s1);
+  applySide(t2, g.s2);
+  t1.querySelector(".team-score").textContent = g.score1 != null ? g.score1 : "–";
+  t2.querySelector(".team-score").textContent = g.score2 != null ? g.score2 : "–";
 
-  applyTeamSide(t1, m.player1, m.club1, m.player1Auto);
-  applyTeamSide(t2, m.player2, m.club2, m.player2Auto);
-  t1.querySelector(".team-score").textContent = m.score1 != null ? m.score1 : "–";
-  t2.querySelector(".team-score").textContent = m.score2 != null ? m.score2 : "–";
-
-  if (m.status === "finalizado" && m.winner) {
-    (m.winner === 1 ? t1 : t2).classList.add("winner");
-    (m.winner === 1 ? t2 : t1).classList.add("loser");
+  if (g.status === "finalizado" && g.winner) {
+    (g.winner === 1 ? t1 : t2).classList.add("winner");
+    (g.winner === 1 ? t2 : t1).classList.add("loser");
   }
   return node;
 }
 
-function renderRanking(losers) {
-  const ol = document.getElementById("ranking-derrotados");
-  ol.innerHTML = "";
-  if (!losers.length) {
-    const li = document.createElement("li");
-    li.className = "empty";
-    li.textContent = "Aguardando jogos da 1ª fase…";
-    ol.appendChild(li);
-    return;
-  }
-  for (const l of losers) {
-    const li = document.createElement("li");
-    const crest = clubCrestURL(l.club);
-    const crestHTML = crest
-      ? `<img class="club-crest crest-sm" src="${crest}" alt="${escapeHTML(l.club)}">`
-      : `<span class="crest-sm crest-placeholder"></span>`;
-    li.innerHTML = `
-      ${crestHTML}
-      <span class="name">${escapeHTML(l.name || "—")}</span>
-      <span class="stat">saldo ${l.saldo >= 0 ? "+" : ""}${l.saldo}</span>
-      <span class="stat">${l.feitos} GP</span>
-    `;
-    ol.appendChild(li);
-  }
-}
-
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
 }
 
@@ -394,18 +424,30 @@ async function refresh() {
   const lastUpdate = document.getElementById("last-update");
   try {
     const rows = await loadData();
-    const matches = rows.filter(r => r.jogo_id).map(buildMatch);
-    const losers = computeLosersRanking(matches);
-    if (AUTO_DERIVE) {
-      const repWinners = computeRepescagemWinnersRanking(matches);
-      deriveMatches(matches, losers, repWinners);
-    }
-    renderBracket(matches);
-    renderRanking(losers);
+    const { participants, gamesById } = buildModel(rows);
+    const groupGames = buildGroupGames(participants, gamesById);
+    const tpl = document.getElementById("match-template");
+
+    const rankA = computeStandings(participants, groupGames.A, "A");
+    const rankB = computeStandings(participants, groupGames.B, "B");
+    const completeA = isGroupComplete(groupGames.A);
+    const completeB = isGroupComplete(groupGames.B);
+
+    renderStandings("standings-A", rankA, completeA);
+    renderStandings("standings-B", rankB, completeB);
+    renderMatchCards("games-A", groupGames.A, tpl);
+    renderMatchCards("games-B", groupGames.B, tpl);
+
+    const ko = buildKnockout(participants, gamesById, rankA, rankB, completeA && completeB);
+    renderMatchCards("matches-quartas", [ko.QF1, ko.QF2, ko.QF3, ko.QF4], tpl);
+    renderMatchCards("matches-semis", [ko.SF1, ko.SF2], tpl);
+    renderMatchCards("matches-final", [ko.FINAL], tpl);
+    renderMatchCards("matches-terceiro", [ko.TER], tpl);
+
     const now = new Date();
     lastUpdate.textContent = `atualizado ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
   } catch (err) {
-    console.error("[bracket] falha ao carregar:", err);
+    console.error("[campeonato] falha ao carregar:", err);
     lastUpdate.textContent = "erro ao atualizar — verifique a planilha";
   }
 }

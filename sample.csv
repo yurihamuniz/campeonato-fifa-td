@@ -1,19 +1,51 @@
-jogo_id,fase,jogador1,clube1,placar1,jogador2,clube2,placar2,vencedor,status
-J1,primeira,Jogador A,,,Jogador B,,,,a_definir
-J2,primeira,Jogador C,,,Jogador D,,,,a_definir
-J3,primeira,Jogador E,,,Jogador F,,,,a_definir
-J4,primeira,Jogador G,,,Jogador H,,,,a_definir
-J5,primeira,Jogador I,,,Jogador J,,,,a_definir
-J6,primeira,Jogador K,,,Jogador L,,,,a_definir
-RP1,repescagem_f1,,,,,,,,a_definir
-RP2,repescagem_f1,,,,,,,,a_definir
-RP3,repescagem_f1,,,,,,,,a_definir
-RF1,repescagem_f2,,,,,,,,a_definir
-FR,repescagem_final,,,,,,,,a_definir
-QF1,quartas,Jogador M,,,,,,,a_definir
-QF2,quartas,,,,,,,,a_definir
-QF3,quartas,,,,,,,,a_definir
-QF4,quartas,,,,,,,,a_definir
-SF1,semis,,,,,,,,a_definir
-SF2,semis,,,,,,,,a_definir
-FINAL,final,,,,,,,,a_definir
+tipo,id,grupo,pos1,pos2,nome,clube,placar1,placar2,vencedor,status
+participante,1,A,,,Jogador 1,,,,,
+participante,2,B,,,Jogador 2,,,,,
+participante,3,A,,,Jogador 3,,,,,
+participante,4,B,,,Jogador 4,,,,,
+participante,5,A,,,Jogador 5,,,,,
+participante,6,B,,,Jogador 6,,,,,
+participante,7,A,,,Jogador 7,,,,,
+participante,8,B,,,Jogador 8,,,,,
+participante,9,A,,,Jogador 9,,,,,
+participante,10,B,,,Jogador 10,,,,,
+participante,11,A,,,Jogador 11,,,,,
+participante,12,B,,,Jogador 12,,,,,
+participante,13,A,,,Jogador 13,,,,,
+participante,14,B,,,Jogador 14,,,,,
+jogo,GA1,A,1,3,,,,,,a_definir
+jogo,GA2,A,1,5,,,,,,a_definir
+jogo,GA3,A,1,7,,,,,,a_definir
+jogo,GA4,A,1,11,,,,,,a_definir
+jogo,GA5,A,3,5,,,,,,a_definir
+jogo,GA6,A,3,7,,,,,,a_definir
+jogo,GA7,A,3,13,,,,,,a_definir
+jogo,GA8,A,5,9,,,,,,a_definir
+jogo,GA9,A,5,13,,,,,,a_definir
+jogo,GA10,A,7,9,,,,,,a_definir
+jogo,GA11,A,7,11,,,,,,a_definir
+jogo,GA12,A,9,11,,,,,,a_definir
+jogo,GA13,A,9,13,,,,,,a_definir
+jogo,GA14,A,11,13,,,,,,a_definir
+jogo,GB1,B,2,4,,,,,,a_definir
+jogo,GB2,B,2,6,,,,,,a_definir
+jogo,GB3,B,2,8,,,,,,a_definir
+jogo,GB4,B,2,12,,,,,,a_definir
+jogo,GB5,B,4,6,,,,,,a_definir
+jogo,GB6,B,4,8,,,,,,a_definir
+jogo,GB7,B,4,14,,,,,,a_definir
+jogo,GB8,B,6,10,,,,,,a_definir
+jogo,GB9,B,6,14,,,,,,a_definir
+jogo,GB10,B,8,10,,,,,,a_definir
+jogo,GB11,B,8,12,,,,,,a_definir
+jogo,GB12,B,10,12,,,,,,a_definir
+jogo,GB13,B,10,14,,,,,,a_definir
+jogo,GB14,B,12,14,,,,,,a_definir
+jogo,QF1,,,,,,,,,a_definir
+jogo,QF2,,,,,,,,,a_definir
+jogo,QF3,,,,,,,,,a_definir
+jogo,QF4,,,,,,,,,a_definir
+jogo,SF1,,,,,,,,,a_definir
+jogo,SF2,,,,,,,,,a_definir
+jogo,TER,,,,,,,,,a_definir
+jogo,FINAL,,,,,,,,,a_definir

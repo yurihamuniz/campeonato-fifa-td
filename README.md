@@ -1,8 +1,8 @@
 # Campeonato FIFA TD — Bracket Online
 
-Página HTML estática que renderiza o chaveamento do campeonato lendo os resultados de uma planilha Google. Auto-refresh a cada 20s — todo mundo vê os placares atualizarem sem precisar dar reload.
+Página HTML estática que renderiza o campeonato lendo os resultados de uma planilha Google. Auto-refresh a cada 20s — todo mundo vê os placares e a classificação atualizarem sem precisar dar reload.
 
-**Formato:** 13 participantes. 12 jogam a 1ª fase em 6 confrontos. Time M tem bye direto pras quartas. Os 6 derrotados disputam a repescagem (3 fases) por 1 vaga nas quartas, que enfrenta o Time M na QF1.
+**Formato:** 14 participantes, 2 grupos de 7 (Grupo A = posições ímpares, Grupo B = pares). Cada um joga 4 partidas na fase de grupos. Os 4 melhores de cada grupo avançam para o mata-mata (quartas → semis → final + disputa de 3º lugar).
 
 ## Como funciona
 
@@ -18,165 +18,117 @@ Página HTML estática que renderiza o chaveamento do campeonato lendo os result
    └────────────┘
 ```
 
-## Setup em 6 passos
+A página **calcula a classificação dos grupos** (pontos, saldo, etc.) e **monta o mata-mata automaticamente** a partir dela. Você só preenche: quem é cada participante, qual clube pegou, e os placares.
 
-### 1. Criar a planilha Google
+## Estrutura da planilha
 
-- Crie uma planilha nova com uma única aba chamada `Bracket`.
-- Use exatamente estas colunas na primeira linha:
+Uma única aba, com **duas seções** identificadas pela coluna `tipo`:
 
-  | jogo_id | fase | jogador1 | clube1 | placar1 | jogador2 | clube2 | placar2 | vencedor | status |
-  | ------- | ---- | -------- | ------ | ------- | -------- | ------ | ------- | -------- | ------ |
+| tipo | id | grupo | pos1 | pos2 | nome | clube | placar1 | placar2 | vencedor | status |
+| ---- | -- | ----- | ---- | ---- | ---- | ----- | ------- | ------- | -------- | ------ |
 
-- Copie as 18 linhas do arquivo [`sample.csv`](sample.csv) (Arquivo → Importar → Substituir planilha).
-- Os valores válidos para `status` são: `a_definir`, `ao_vivo`, `finalizado`.
-- As fases válidas são: `primeira`, `repescagem_f1`, `repescagem_f2`, `repescagem_final`, `quartas`, `semis`, `final`.
-- **IMPORTANTE — Time M (bye):** a linha `QF1` já tem `jogador1` = "Jogador M" no `sample.csv`. Logo após o sorteio inicial, troque "Jogador M" pelo nome real do jogador com bye e preencha `clube1` do `QF1` com o clube dele. O jogador2 da QF1 é auto-preenchido (vencedor da repescagem).
-- **Clubes válidos** (use exatamente esses nomes nas colunas `clube1`/`clube2` para o escudo aparecer):
+### Linhas `participante` (14 linhas)
 
-  **5★** — `Real Madrid`, `Barcelona`, `PSG`, `Bayern de Munique`, `Liverpool`, `Arsenal`, `Manchester City`, `Inter de Milão`
+Definem quem está em cada posição do sorteio e **qual clube pegou**:
 
-  **4,5★** — `Atlético de Madrid`, `Napoli`, `Borussia Dortmund`, `Milan`, `Newcastle United`, `Tottenham`, `Juventus`, `RB Leipzig`, `Bayer Leverkusen`, `Chelsea`, `Manchester United`
+- `tipo` = `participante`
+- `id` = posição no sorteio (1 a 14)
+- `nome` = nome do jogador
+- `clube` = clube que ele escolheu (ver lista de clubes válidos abaixo)
+- `grupo` = `A` ou `B` (opcional — se vazio, é calculado: ímpar→A, par→B)
 
-  **4★** — `Galatasaray`
+> O clube é registrado **uma vez só** aqui. Todos os jogos puxam o escudo automaticamente.
 
-- **Dica:** no Sheets, selecione as colunas `clube1` e `clube2` → **Dados → Validação de dados → Lista de itens** e cole os 20 nomes acima. Assim você escolhe pelo dropdown e não erra a grafia.
+### Linhas `jogo`
 
-### 2. Publicar a planilha como CSV
+- **Fase de grupos** (28 linhas, IDs `GA1`–`GA14` e `GB1`–`GB14`): já vêm com `pos1`/`pos2` preenchidos (o chaveamento é fixo). Você só preenche `placar1`, `placar2` e `status`.
+- **Mata-mata** (8 linhas: `QF1`–`QF4`, `SF1`, `SF2`, `TER`, `FINAL`): deixe `pos1`/`pos2` vazios — os confrontos são montados automaticamente a partir da classificação. Você preenche `placar1`, `placar2`, `status` e, em caso de empate, `vencedor`.
 
-- Na planilha: **Arquivo → Compartilhar → Publicar na web**.
-- Em "Link", escolha a aba `Bracket` e formato **CSV**.
-- Clique em **Publicar** e copie a URL gerada (formato `https://docs.google.com/spreadsheets/d/e/.../pub?output=csv`).
+Copie o arquivo [`sample.csv`](sample.csv) (Arquivo → Importar → Substituir planilha) para começar com tudo pronto.
 
-### 3. Configurar a URL no `app.js`
+## Pontuação e classificação
 
-Abra [`app.js`](app.js) e cole a URL na constante `SHEET_CSV_URL`:
+- Vitória = **3 pts** · Empate = **1 pt** · Derrota = **0**
+- Critérios de desempate (nesta ordem): **pontos → saldo de gols → gols marcados → confronto direto → posição no sorteio**
 
-```js
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/.../pub?output=csv";
-```
+## Montagem do mata-mata (automática)
 
-### 4. Subir para o GitHub
+Quando **todos os 28 jogos de grupo** estiverem `finalizado`, a página monta:
 
-```bash
-git init
-git add .
-git commit -m "Campeonato FIFA TD - bracket inicial"
-git branch -M main
-git remote add origin https://github.com/<seu-user>/campeonato-fifa-td.git
-git push -u origin main
-```
+| Confronto | Seeding |
+| --------- | ------- |
+| QF1 | 1º Grupo A × 4º Grupo B |
+| QF2 | 2º Grupo A × 3º Grupo B |
+| QF3 | 1º Grupo B × 4º Grupo A |
+| QF4 | 2º Grupo B × 3º Grupo A |
+| Semi 1 | Vencedor QF1 × Vencedor QF2 |
+| Semi 2 | Vencedor QF3 × Vencedor QF4 |
+| 3º lugar | Perdedor Semi 1 × Perdedor Semi 2 |
+| Final | Vencedor Semi 1 × Vencedor Semi 2 |
 
-### 5. Ativar GitHub Pages
+Antes dos grupos terminarem, os confrontos do mata-mata aparecem como "a definir" e a classificação mostra "provisória".
 
-- No repo: **Settings → Pages → Source: Deploy from a branch → main → / (root)**.
-- Aguarde 1-2 min. O link público fica em `https://<seu-user>.github.io/campeonato-fifa-td/`.
+**Override manual:** se precisar mudar um confronto do mata-mata (ex: alguém saiu mais cedo), basta preencher `pos1`/`pos2` daquela linha com as posições dos participantes — isso tem prioridade sobre o automático. Para desligar o automático de vez, mude `SEED_KNOCKOUT_FROM_STANDINGS` para `false` no [`app.js`](app.js).
 
-### 6. Compartilhar o link com a galera
+## Empates no mata-mata
 
-Pronto. Manda no grupo e qualquer pessoa vê o bracket atualizar em tempo real conforme você edita a planilha.
+No mata-mata não pode haver empate. Se o jogo terminar empatado e for decidido na prorrogação/pênaltis, preencha a coluna `vencedor` com `1` ou `2` (referente ao lado 1 ou lado 2 do confronto). Na fase de grupos, empate é resultado válido (1 ponto para cada) — não use a coluna `vencedor`.
 
-## Como atualizar resultados durante o torneio
+## Setup (6 passos)
 
-### Fluxo básico
-1. Abra a planilha (de preferência pelo app Google Sheets no celular).
-2. Depois do sorteio inicial, preencha as colunas `jogador1`/`clube1` e `jogador2`/`clube2` das linhas `J1` a `J6` — o escudo aparece na tela ao lado do nome do jogador.
-3. Quando começar um jogo, mude o `status` da linha para `ao_vivo` — o card pulsa em roxo na tela de todo mundo.
-4. Conforme rolam os gols, atualize `placar1` e `placar2`.
-5. Ao fim do jogo, mude o `status` para `finalizado`. O vencedor é detectado automaticamente (maior placar).
+1. Crie uma planilha Google e importe o [`sample.csv`](sample.csv).
+2. Preencha as 14 linhas `participante` com nome + clube (após o sorteio externo).
+3. **Arquivo → Compartilhar → Publicar na web → CSV** e copie a URL gerada.
+4. Cole a URL na constante `SHEET_CSV_URL` no [`app.js`](app.js).
+5. Suba para o GitHub e ative **Settings → Pages → branch main**.
+6. Compartilhe o link `https://<seu-user>.github.io/campeonato-fifa-td/`.
 
-### Empates (decisão por pênaltis / outro critério)
+## Atualizando durante o torneio
 
-Se o jogo terminar empatado (ex: 1×1) e for decidido por pênaltis ou outro critério extra, preencha a coluna **`vencedor`** com `1` ou `2` (referente ao `jogador1` ou `jogador2`).
+1. Abra a planilha (app Google Sheets no celular funciona bem).
+2. Comece um jogo → mude `status` para `ao_vivo` (o card pulsa em roxo).
+3. Atualize `placar1`/`placar2` conforme rolam os gols.
+4. Fim do jogo → `status` para `finalizado`. A classificação recalcula sozinha.
+5. Mata-mata: quando os grupos acabam, os confrontos aparecem automaticamente.
 
-- A coluna `vencedor` **sobrescreve** a detecção automática pelo placar — útil também se quiser forçar manualmente um resultado.
-- Quando você marca um empate como finalizado e preenche `vencedor`, o card mostra "finalizado · decisão" no cabeçalho.
-- O **saldo de gols** desse jogo continua sendo 0 (porque os placares são iguais), então tanto o vencedor quanto o perdedor desse jogo entram no critério de desempate com saldo 0 — gols marcados e ordem na planilha viram os próximos critérios.
+## Clubes válidos
 
-### Modo "planilha é a verdade" (atual)
+Use exatamente estes nomes na coluna `clube` para o escudo aparecer:
 
-A constante `AUTO_DERIVE` em [`app.js`](app.js) está em `false`. Ou seja: **a página espelha 100% o que está na planilha**, sem aplicar nenhuma regra de propagação automática entre fases.
+**5★** — `Real Madrid`, `Barcelona`, `PSG`, `Bayern de Munique`, `Liverpool`, `Arsenal`, `Manchester City`, `Inter de Milão`
 
-Esse modo foi adotado porque o formato real pode mudar no meio do torneio (gente que precisa sair mais cedo, troca de chaveamento, etc). Ter a planilha como fonte única de verdade evita conflitos.
+**4,5★** — `Atlético de Madrid`, `Napoli`, `Borussia Dortmund`, `Milan`, `Newcastle United`, `Tottenham`, `Juventus`, `RB Leipzig`, `Bayer Leverkusen`, `Chelsea`, `Manchester United`
 
-**Você precisa preencher manualmente:**
+**4★** — `Galatasaray`
 
-- `jogador1`/`clube1`/`jogador2`/`clube2` de **TODAS** as linhas (J1–J6, RP1–RP3, RF1, FR, QF1–QF4, SF1, SF2, FINAL)
-- `placar1`, `placar2`, `status` conforme os jogos acontecem
-- `vencedor` (1 ou 2) em caso de empate decidido por pênaltis
-
-**O que o JS ainda faz sozinho:**
-
-- Detecta vencedor pelo placar (ou pela coluna `vencedor`)
-- Calcula o ranking dos derrotados (sidebar) — saldo → gols → ordem na planilha
-- Marca vencedor visualmente no card
-
-### Como reativar a auto-propagação
-
-Se quiser voltar pro modo automático em algum torneio futuro, é só trocar:
-
-```js
-const AUTO_DERIVE = false;  →  const AUTO_DERIVE = true;
-```
-
-A lógica original continua intacta no código (função `deriveMatches`), só não é chamada quando o flag está em `false`.
-
-### Sorteio das quartas
-
-A [página de sorteio](sorteio.html) continua funcionando independente do `AUTO_DERIVE`. Ela lê os 6 vencedores da 1ª fase e sorteia QF2, QF3 e QF4 com animação — depois você copia o resultado pra planilha.
-
-## Página de sorteio (`sorteio.html`)
-
-Página separada com animação tipo slot machine pra sortear as quartas:
-
-- Lê os 6 vencedores da 1ª fase da mesma planilha
-- Mostra a QF1 já definida (Time M × Vencedor da Repescagem)
-- Botão grande "SORTEAR QF2, QF3 e QF4" — clica e roda a animação
-- Cada slot fica girando ~2s e revela o nome com efeito de pop
-- Depois mostra a lista pronta pra copiar pra planilha
-- Botão "sortear de novo" caso queira refazer
-
-Antes de todos os 6 jogos da 1ª fase estarem `finalizado`, a página mostra "aguardando" e lista quais jogos faltam.
+> Dica: no Sheets, selecione a coluna `clube` → **Dados → Validação de dados → Lista de itens** e cole os 20 nomes. Vira dropdown e elimina erro de digitação.
 
 ## Estrutura dos arquivos
 
 ```
 campeonato-fifa-td/
-├── index.html        # bracket principal
+├── index.html        # classificação dos grupos + mata-mata
 ├── style.css         # paleta TD B2B + layout responsivo
-├── app.js            # fetch da planilha + render + auto-refresh
-├── sorteio.html      # página dedicada de sorteio das quartas
-├── sorteio.css       # estilos do sorteio
-├── sorteio.js        # animação do sorteio + lógica
+├── app.js            # fetch + cálculo de classificação + seeding + render
 ├── sample.csv        # planilha-modelo (importar no Google Sheets)
 ├── README.md         # este arquivo
 └── assets/
     ├── logo-TD.png
     ├── logo-TD-branco.png
-    └── clubs/        # 20 escudos PNG dos clubes FIFA
-        ├── real-madrid.png
-        ├── barcelona.png
-        └── ... (mais 18)
+    └── clubs/        # 20 escudos PNG dos clubes
 ```
 
-Escudos baixados do repo público [luukhopman/football-logos](https://github.com/luukhopman/football-logos).
+Escudos do repo público [luukhopman/football-logos](https://github.com/luukhopman/football-logos).
 
-## Paleta TD B2B aplicada
+## Rodar localmente
+
+Deixe `SHEET_CSV_URL = ""` no `app.js` e sirva a pasta com um servidor estático (`npx serve` ou Live Server do VSCode). Vai usar o `sample.csv` local.
+
+## Paleta TD B2B
 
 | Cor | Hex | Uso |
 | --- | --- | --- |
-| Black | `#020406` | fundo principal |
-| Purple | `#A683E8` | destaque, vencedor, "ao vivo" |
-| Light Blue | `#A1BFF6` | acentos, links, "finalizado" |
-| Sakura | `#E9D5ED` | (reserva) |
+| Black | `#020406` | fundo |
+| Purple | `#A683E8` | destaque, classificados, "ao vivo" |
+| Light Blue | `#A1BFF6` | acentos, "finalizado" |
 | White | `#EAECEF` | texto |
-
-## Dúvidas comuns
-
-**O placar não está atualizando.** Pode ser cache do Google (~1-2min em horários de pico). Recarregue a página ou clique em "atualizar agora" no rodapé.
-
-**Como faço para mudar um nome de time depois?** Edita direto a célula na planilha. A página puxa a mudança em até 20s.
-
-**Quero rodar localmente para testar.** Deixe `SHEET_CSV_URL = ""` no `app.js` e abra `index.html` via um servidor estático (ex: `npx serve` ou extensão Live Server do VSCode). Ele vai usar o `sample.csv` local.
-
-**Posso ter mais de um admin?** Sim — qualquer pessoa com permissão de edição na planilha pode atualizar. Sheets resolve conflitos automaticamente.

@@ -12,7 +12,7 @@
       <img src="assets/logo-TD-branco.png" alt="TD" class="logo">
       <div class="title-group">
         <h1>Campeonato FIFA TD</h1>
-        <p class="subtitle">Bracket ao vivo</p>
+        <p class="subtitle">Fase de grupos + mata-mata · ao vivo</p>
       </div>
     </div>
     <div class="status-bar">
@@ -21,51 +21,56 @@
     </div>
   </header>
 
-  <main id="bracket">
-    <section class="phase" data-phase="primeira">
-      <h2 class="phase-title">1ª Fase</h2>
-      <div class="matches" id="matches-primeira"></div>
+  <main>
+    <!-- ===================== FASE DE GRUPOS ===================== -->
+    <section class="stage">
+      <h2 class="stage-title">Fase de Grupos</h2>
+      <div class="groups">
+        <div class="group-block" data-group="A">
+          <h3 class="group-title"><span class="group-tag tag-a">Grupo A</span></h3>
+          <div class="standings-wrap" id="standings-A"></div>
+          <details class="group-games">
+            <summary>Jogos do Grupo A</summary>
+            <div class="matches" id="games-A"></div>
+          </details>
+        </div>
+
+        <div class="group-block" data-group="B">
+          <h3 class="group-title"><span class="group-tag tag-b">Grupo B</span></h3>
+          <div class="standings-wrap" id="standings-B"></div>
+          <details class="group-games">
+            <summary>Jogos do Grupo B</summary>
+            <div class="matches" id="games-B"></div>
+          </details>
+        </div>
+      </div>
+      <p class="legend"><span class="legend-dot"></span> 4 primeiros de cada grupo avançam para o mata-mata</p>
     </section>
 
-    <section class="phase" data-phase="repescagem_f1">
-      <h2 class="phase-title">Repescagem F1</h2>
-      <div class="matches" id="matches-repescagem_f1"></div>
-    </section>
-
-    <section class="phase" data-phase="repescagem_f2">
-      <h2 class="phase-title">Repescagem F2</h2>
-      <div class="matches" id="matches-repescagem_f2"></div>
-    </section>
-
-    <section class="phase" data-phase="repescagem_final">
-      <h2 class="phase-title">Final da Repescagem</h2>
-      <div class="matches" id="matches-repescagem_final"></div>
-    </section>
-
-    <section class="phase" data-phase="quartas">
-      <h2 class="phase-title">Quartas</h2>
-      <div class="matches" id="matches-quartas"></div>
-    </section>
-
-    <section class="phase" data-phase="semis">
-      <h2 class="phase-title">Semifinais</h2>
-      <div class="matches" id="matches-semis"></div>
-    </section>
-
-    <section class="phase phase-final" data-phase="final">
-      <h2 class="phase-title">Final</h2>
-      <div class="matches" id="matches-final"></div>
+    <!-- ===================== MATA-MATA ===================== -->
+    <section class="stage">
+      <h2 class="stage-title">Mata-mata</h2>
+      <div class="knockout">
+        <div class="ko-phase">
+          <h3 class="phase-title">Quartas</h3>
+          <div class="matches" id="matches-quartas"></div>
+        </div>
+        <div class="ko-phase">
+          <h3 class="phase-title">Semifinais</h3>
+          <div class="matches" id="matches-semis"></div>
+        </div>
+        <div class="ko-phase">
+          <h3 class="phase-title">Final</h3>
+          <div class="matches" id="matches-final"></div>
+          <h3 class="phase-title phase-title-3rd">3º lugar</h3>
+          <div class="matches" id="matches-terceiro"></div>
+        </div>
+      </div>
     </section>
   </main>
 
-  <aside class="sidebar">
-    <h3>Ranking dos derrotados</h3>
-    <p class="hint">Critérios: saldo de gols → gols marcados → ordem na planilha</p>
-    <ol id="ranking-derrotados" class="ranking"></ol>
-  </aside>
-
   <footer class="footer">
-    <p>Atualização automática a cada 20s · <a href="#" id="refresh-now">atualizar agora</a> · <a href="sorteio.html">sortear quartas →</a></p>
+    <p>Atualização automática a cada 20s · <a href="#" id="refresh-now">atualizar agora</a></p>
   </footer>
 
   <template id="match-template">
