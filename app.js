@@ -12,7 +12,7 @@
 // Mata-mata: semeado automaticamente da classificação (configurável).
 // ============================================================
 
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjVVtDYXYTcfy2tevgpRII-NUmBMiVQ5-nZ0_9atvNjeu6ts8B418Vkc1iqCc_MxgsR29_ev8gQ-6R/pub?gid=0&single=true&output=csv";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/119-O1zM4OZ3W-PAm9uNLctxkSZJPII84ePdu3t-JUug/export?format=csv&gid=278622039";
 const REFRESH_INTERVAL_MS = 20_000;
 const FALLBACK_CSV_URL = "sample.csv";
 
@@ -62,12 +62,34 @@ const CLUBS = {
   "Juventus":"juventus","RB Leipzig":"leipzig","Bayer Leverkusen":"leverkusen",
   "Chelsea":"chelsea","Manchester United":"man-united","Galatasaray":"galatasaray",
 };
-const _normClub = s => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-const CLUBS_NORM = Object.fromEntries(Object.entries(CLUBS).map(([n,s]) => [_normClub(n), s]));
+// Seleções/países (nome PT-BR → código ISO para a bandeira via flagcdn.com)
+const COUNTRIES = {
+  "Brasil":"br","Argentina":"ar","França":"fr","Espanha":"es","Portugal":"pt",
+  "Alemanha":"de","Inglaterra":"gb-eng","Itália":"it","Holanda":"nl","Países Baixos":"nl",
+  "Bélgica":"be","Croácia":"hr","Uruguai":"uy","Colômbia":"co","México":"mx",
+  "Estados Unidos":"us","Japão":"jp","Coreia do Sul":"kr","Marrocos":"ma","Senegal":"sn",
+  "Gana":"gh","Nigéria":"ng","Camarões":"cm","Egito":"eg","Costa do Marfim":"ci",
+  "Suíça":"ch","Dinamarca":"dk","Suécia":"se","Noruega":"no","Polônia":"pl",
+  "Sérvia":"rs","Áustria":"at","Ucrânia":"ua","País de Gales":"gb-wls","Escócia":"gb-sct",
+  "Equador":"ec","Peru":"pe","Chile":"cl","Paraguai":"py","Bolívia":"bo","Venezuela":"ve",
+  "Canadá":"ca","Austrália":"au","Catar":"qa","Qatar":"qa","Arábia Saudita":"sa",
+  "Irã":"ir","Iraque":"iq","Turquia":"tr","Grécia":"gr","República Tcheca":"cz","Tchéquia":"cz",
+  "Hungria":"hu","Rússia":"ru","Romênia":"ro","Irlanda":"ie","Eslováquia":"sk","Eslovênia":"si",
+  "Tunísia":"tn","Argélia":"dz","África do Sul":"za","Jamaica":"jm","Costa Rica":"cr",
+  "Panamá":"pa","Honduras":"hn","Nova Zelândia":"nz","China":"cn","Índia":"in",
+};
+
+const _norm = s => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+const CLUBS_NORM = Object.fromEntries(Object.entries(CLUBS).map(([n,s]) => [_norm(n), s]));
+const COUNTRIES_NORM = Object.fromEntries(Object.entries(COUNTRIES).map(([n,c]) => [_norm(n), c]));
+
+// Aceita clube (escudo local) ou seleção/país (bandeira do flagcdn).
 function clubCrestURL(name) {
   if (!name) return null;
-  const slug = CLUBS_NORM[_normClub(name)];
-  return slug ? `assets/clubs/${slug}.png` : null;
+  const key = _norm(name);
+  if (CLUBS_NORM[key]) return `assets/clubs/${CLUBS_NORM[key]}.png`;
+  if (COUNTRIES_NORM[key]) return `https://flagcdn.com/w80/${COUNTRIES_NORM[key]}.png`;
+  return null;
 }
 
 // ============================================================

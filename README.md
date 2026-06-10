@@ -91,17 +91,15 @@ No mata-mata não pode haver empate. Se o jogo terminar empatado e for decidido 
 4. Fim do jogo → `status` para `finalizado`. A classificação recalcula sozinha.
 5. Mata-mata: quando os grupos acabam, os confrontos aparecem automaticamente.
 
-## Clubes válidos
+## Coluna `clube` — escudos e bandeiras
 
-Use exatamente estes nomes na coluna `clube` para o escudo aparecer:
+A coluna `clube` aceita **clubes** (escudo local) ou **seleções/países** (bandeira automática via flagcdn.com). É só escrever o nome.
 
-**5★** — `Real Madrid`, `Barcelona`, `PSG`, `Bayern de Munique`, `Liverpool`, `Arsenal`, `Manchester City`, `Inter de Milão`
+**Clubes com escudo:** `Real Madrid`, `Barcelona`, `PSG`, `Bayern de Munique`, `Liverpool`, `Arsenal`, `Manchester City`, `Inter de Milão`, `Atlético de Madrid`, `Napoli`, `Borussia Dortmund`, `Milan`, `Newcastle United`, `Tottenham`, `Juventus`, `RB Leipzig`, `Bayer Leverkusen`, `Chelsea`, `Manchester United`, `Galatasaray`
 
-**4,5★** — `Atlético de Madrid`, `Napoli`, `Borussia Dortmund`, `Milan`, `Newcastle United`, `Tottenham`, `Juventus`, `RB Leipzig`, `Bayer Leverkusen`, `Chelsea`, `Manchester United`
+**Seleções com bandeira:** `Brasil`, `Argentina`, `França`, `Espanha`, `Portugal`, `Alemanha`, `Inglaterra`, `Itália`, `Holanda`, `Bélgica`, `Croácia`, `Uruguai`, `Colômbia`, `México`, `Estados Unidos`, `Japão`, `Coreia do Sul`, `Marrocos`, `Senegal`, e a maioria das seleções (nome em português). Se algum nome não aparecer com bandeira, me avise o nome exato que adiciono.
 
-**4★** — `Galatasaray`
-
-> Dica: no Sheets, selecione a coluna `clube` → **Dados → Validação de dados → Lista de itens** e cole os 20 nomes. Vira dropdown e elimina erro de digitação.
+> Dica: no Sheets, selecione a coluna `clube` → **Dados → Validação de dados → Lista de itens** e cole os nomes que vão usar. Vira dropdown e elimina erro de digitação.
 
 ## Estrutura dos arquivos
 
